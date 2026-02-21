@@ -1,6 +1,5 @@
 import { notFound } from "next/navigation";
 import { db } from "@/lib/db";
-import { MOCK_PRODUCTS } from "@/lib/mock-data";
 import ProductDetailClient from "@/components/customer/ProductDetailClient";
 
 interface ProductDetailPageProps {
@@ -8,9 +7,6 @@ interface ProductDetailPageProps {
 }
 
 async function getProduct(id: string) {
-  // Check mock data first (for IDs like "prod-gelato-33")
-  const mockProduct = MOCK_PRODUCTS.find((p) => p.id === id);
-
   try {
     const product = await db.product.findUnique({
       where: { id },
@@ -28,15 +24,7 @@ async function getProduct(id: string) {
       },
     });
 
-    if (!product) {
-      // Fall back to mock data
-      if (!mockProduct) return null;
-      return {
-        ...mockProduct,
-        categoryId: mockProduct.category.slug,
-        reviews: [],
-      };
-    }
+    if (!product) return null;
 
     const agg = await db.review.aggregate({
       where: { productId: product.id },
@@ -59,13 +47,7 @@ async function getProduct(id: string) {
       })),
     };
   } catch {
-    // DB unavailable — use mock data
-    if (!mockProduct) return null;
-    return {
-      ...mockProduct,
-      categoryId: mockProduct.category.slug,
-      reviews: [],
-    };
+    return null;
   }
 }
 
@@ -84,21 +66,12 @@ async function getRecommendations(productId: string, categorySlug: string) {
       orderBy: { sortOrder: "asc" },
     });
 
-    if (products.length > 0) {
-      return products.map((p) => ({
-        ...p,
-        price: Number(p.price),
-      }));
-    }
-
-    // Fall back to mock data
-    return MOCK_PRODUCTS
-      .filter((p) => p.id !== productId && p.category.slug === categorySlug)
-      .slice(0, 4);
+    return products.map((p) => ({
+      ...p,
+      price: Number(p.price),
+    }));
   } catch {
-    return MOCK_PRODUCTS
-      .filter((p) => p.id !== productId && p.category.slug === categorySlug)
-      .slice(0, 4);
+    return [];
   }
 }
 

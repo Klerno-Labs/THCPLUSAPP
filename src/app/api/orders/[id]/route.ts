@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { updateOrderStatusSchema } from "@/lib/validations";
-import { pusherServer, CHANNELS, EVENTS } from "@/lib/pusher";
+import { getPusherServer, CHANNELS, EVENTS } from "@/lib/pusher";
 import {
   sendSms,
   getOrderReadySms,
@@ -181,27 +181,30 @@ export async function PATCH(
       }
     }
 
-    // ── Trigger Pusher events ──
-    const statusPayload: OrderStatusChangedEvent = {
-      orderId: updatedOrder.id,
-      orderNumber: updatedOrder.orderNumber,
-      previousStatus,
-      newStatus: status,
-      updatedAt: updatedOrder.updatedAt.toISOString(),
-    };
+    // ── Trigger Pusher events (graceful when not configured) ──
+    const pusher = getPusherServer();
+    if (pusher) {
+      const statusPayload: OrderStatusChangedEvent = {
+        orderId: updatedOrder.id,
+        orderNumber: updatedOrder.orderNumber,
+        previousStatus,
+        newStatus: status,
+        updatedAt: updatedOrder.updatedAt.toISOString(),
+      };
 
-    await Promise.all([
-      pusherServer.trigger(
-        CHANNELS.order(updatedOrder.id),
-        EVENTS.orderStatusChanged,
-        statusPayload
-      ),
-      pusherServer.trigger(
-        CHANNELS.adminOrders,
-        EVENTS.orderStatusChanged,
-        statusPayload
-      ),
-    ]);
+      await Promise.all([
+        pusher.trigger(
+          CHANNELS.order(updatedOrder.id),
+          EVENTS.orderStatusChanged,
+          statusPayload
+        ),
+        pusher.trigger(
+          CHANNELS.adminOrders,
+          EVENTS.orderStatusChanged,
+          statusPayload
+        ),
+      ]).catch((err) => console.error("Pusher trigger failed:", err));
+    }
 
     return NextResponse.json(updatedOrder);
   } catch (error) {

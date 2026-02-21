@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect, useCallback } from "react";
 import { motion } from "framer-motion";
 import Link from "next/link";
 import {
@@ -13,7 +13,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
-// ─── Mock AI Responses ────────────────────────────────────
+// ─── Suggestions ──────────────────────────────────────────
 const SUGGESTIONS = [
   "What's good for relaxing after work?",
   "I want something energizing for daytime",
@@ -34,54 +34,12 @@ const GREETING: Message = {
     "Hey! I'm your AI Budtender. Tell me what kind of experience you're looking for — relaxing, energizing, creative, pain relief — and I'll recommend something from our menu. What sounds good?",
 };
 
-// Simple keyword-based mock responses
-function getAiResponse(input: string): string {
-  const lower = input.toLowerCase();
-
-  if (lower.includes("relax") || lower.includes("chill") || lower.includes("sleep") || lower.includes("wind down")) {
-    return "For relaxation, I'd recommend **Motor Breath** (Indica, 32% THCA) — it's our heaviest hitter for winding down. If you want something a little lighter, **Ice Cream Cake** (Indica, 28% THCA) has a smooth, creamy flavor that's perfect for evening use. Want me to add either to your cart?";
-  }
-
-  if (lower.includes("energy") || lower.includes("daytime") || lower.includes("focus") || lower.includes("sativa")) {
-    return "For daytime energy, check out **Lemon Zkittlez** (Sativa, 26% THCA) — super uplifting with a citrusy kick. If you want a concentrate, our **Pineapple Express** (Sativa, 85% THCA) is incredible for focus. Both great choices for staying productive!";
-  }
-
-  if (lower.includes("strong") || lower.includes("potent") || lower.includes("highest")) {
-    return "Our strongest flower is **Motor Breath** at 32% THCA — it's a heavy indica that hits hard. For concentrates, **MAC** (88% THCA) is the most potent we carry. Fair warning: both are for experienced users! Want to start with something a little more mellow?";
-  }
-
-  if (lower.includes("beginner") || lower.includes("first") || lower.includes("new") || lower.includes("light")) {
-    return "Welcome! For beginners, I'd suggest **Hi Berry Chew** (Hybrid, 25% THCA) — it's balanced and approachable with a fruity flavor. Our **Premium Pre-Rolls** are also great for trying things out without committing to a larger quantity. Start low and go slow!";
-  }
-
-  if (lower.includes("hybrid") || lower.includes("balanced")) {
-    return "For a well-balanced hybrid, **Gelato 33** (29% THCA) is a fan favorite — great flavor, relaxed but not sleepy. **Whiteboy Cookies** (28% THCA) and **Mochi** (29% THCA) are also excellent hybrid choices. Can't go wrong with any of those!";
-  }
-
-  if (lower.includes("concentrate") || lower.includes("dab") || lower.includes("wax")) {
-    return "We've got some fire concentrates! **MAC** (Hybrid, 88% THCA) is our top seller, **Cookies N Creme** (Hybrid, 86% THCA) has an amazing flavor profile, and **Pineapple Express** (Sativa, 85% THCA) is great for a daytime dab. Which vibe are you going for?";
-  }
-
-  if (lower.includes("pre-roll") || lower.includes("preroll") || lower.includes("joint")) {
-    return "Our **Premium Pre-Rolls** come in a Hybrid blend at 28% THCA — convenient and consistent. They're perfect for on-the-go or if you just want to try something without grinding and rolling. Grab a 3-pack!";
-  }
-
-  if (lower.includes("edible") || lower.includes("gumm")) {
-    return "We carry a variety of edibles! Check out the **Products** page for our full selection of gummies and chews. Edibles take 30-90 minutes to kick in, so start with a low dose. Want me to point you to a specific type?";
-  }
-
-  if (lower.includes("thank") || lower.includes("thanks")) {
-    return "You're welcome! Happy to help. Feel free to ask anytime — and when you're ready to order, just hit up the Products page. Enjoy! 🌿";
-  }
-
-  return "Great question! Based on our current menu, I can help you find the right **flower**, **concentrate**, **pre-roll**, or **edible** for your needs. Tell me more about what you're looking for — are you after relaxation, energy, pain relief, or something social? Or just tell me what you've enjoyed before and I'll find something similar.";
-}
-
 // ─── Chat Page ────────────────────────────────────────────
 export default function ChatPage() {
   const [messages, setMessages] = useState<Message[]>([GREETING]);
   const [input, setInput] = useState("");
   const [isTyping, setIsTyping] = useState(false);
+  const [streamingContent, setStreamingContent] = useState("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = () => {
@@ -90,34 +48,96 @@ export default function ChatPage() {
 
   useEffect(() => {
     scrollToBottom();
-  }, [messages, isTyping]);
+  }, [messages, isTyping, streamingContent]);
 
-  const handleSend = async (text?: string) => {
-    const message = text || input.trim();
-    if (!message) return;
+  const handleSend = useCallback(
+    async (text?: string) => {
+      const message = text || input.trim();
+      if (!message || isTyping) return;
 
-    const userMsg: Message = {
-      id: `user_${Date.now()}`,
-      role: "user",
-      content: message,
-    };
+      const userMsg: Message = {
+        id: `user_${Date.now()}`,
+        role: "user",
+        content: message,
+      };
 
-    setMessages((prev) => [...prev, userMsg]);
-    setInput("");
-    setIsTyping(true);
+      setMessages((prev) => [...prev, userMsg]);
+      setInput("");
+      setIsTyping(true);
+      setStreamingContent("");
 
-    // Simulate typing delay
-    await new Promise((resolve) => setTimeout(resolve, 800 + Math.random() * 700));
+      try {
+        const res = await fetch("/api/ai/chat", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            message,
+            sessionId: `web_${Date.now()}`,
+            language: "en",
+          }),
+        });
 
-    const aiMsg: Message = {
-      id: `ai_${Date.now()}`,
-      role: "assistant",
-      content: getAiResponse(message),
-    };
+        if (!res.ok) throw new Error("Chat API error");
 
-    setIsTyping(false);
-    setMessages((prev) => [...prev, aiMsg]);
-  };
+        const reader = res.body?.getReader();
+        if (!reader) throw new Error("No reader");
+
+        const decoder = new TextDecoder();
+        let fullText = "";
+
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+
+          const chunk = decoder.decode(value, { stream: true });
+          const lines = chunk.split("\n");
+
+          for (const line of lines) {
+            if (!line.startsWith("data: ")) continue;
+            const jsonStr = line.slice(6).trim();
+            if (!jsonStr) continue;
+
+            try {
+              const data = JSON.parse(jsonStr);
+
+              if (data.type === "text" && data.content) {
+                fullText += data.content;
+                setStreamingContent(fullText);
+              }
+
+              if (data.type === "done") {
+                // Streaming complete
+              }
+            } catch {
+              // Skip unparseable lines
+            }
+          }
+        }
+
+        if (fullText) {
+          const aiMsg: Message = {
+            id: `ai_${Date.now()}`,
+            role: "assistant",
+            content: fullText,
+          };
+          setMessages((prev) => [...prev, aiMsg]);
+        }
+      } catch {
+        // Fallback: show error message
+        const errorMsg: Message = {
+          id: `ai_${Date.now()}`,
+          role: "assistant",
+          content:
+            "I'm having trouble connecting right now. Please try again in a moment, or visit us in-store and our staff will be happy to help you find the perfect product!",
+        };
+        setMessages((prev) => [...prev, errorMsg]);
+      } finally {
+        setIsTyping(false);
+        setStreamingContent("");
+      }
+    },
+    [input, isTyping]
+  );
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -181,8 +201,27 @@ export default function ChatPage() {
             </motion.div>
           ))}
 
-          {/* Typing indicator */}
-          {isTyping && (
+          {/* Streaming response */}
+          {isTyping && streamingContent && (
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="flex justify-start"
+            >
+              <div className="max-w-[85%] rounded-2xl border border-emerald-900/30 bg-[#111A11] px-4 py-3 text-sm leading-relaxed text-zinc-300">
+                <div className="mb-1.5 flex items-center gap-1.5">
+                  <Leaf className="h-3 w-3 text-emerald-400" />
+                  <span className="text-[10px] font-semibold uppercase tracking-wider text-emerald-400">
+                    AI Budtender
+                  </span>
+                </div>
+                <p className="whitespace-pre-wrap">{streamingContent.replace(/\*\*(.*?)\*\*/g, "$1")}</p>
+              </div>
+            </motion.div>
+          )}
+
+          {/* Typing indicator (no content yet) */}
+          {isTyping && !streamingContent && (
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}

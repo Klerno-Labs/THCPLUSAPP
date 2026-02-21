@@ -3,7 +3,7 @@ import { openai, BUDTENDER_SYSTEM_PROMPT } from "@/lib/openai";
 import { prisma } from "@/lib/db";
 import { chatMessageSchema } from "@/lib/validations";
 
-export const runtime = "edge";
+export const dynamic = "force-dynamic";
 
 // ─── POST: AI Chat (Streaming) ──────────────────────────
 export async function POST(request: NextRequest) {

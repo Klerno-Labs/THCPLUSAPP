@@ -1,5 +1,4 @@
 import { db } from "@/lib/db";
-import { MOCK_PRODUCTS, MOCK_CATEGORIES } from "@/lib/mock-data";
 import ProductsGrid from "@/components/customer/ProductsGrid";
 
 export const dynamic = "force-dynamic";
@@ -17,8 +16,6 @@ async function getProducts() {
       },
       orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
     });
-
-    if (products.length === 0) return MOCK_PRODUCTS;
 
     const withRatings = await Promise.all(
       products.map(async (product) => {
@@ -42,22 +39,20 @@ async function getProducts() {
 
     return withRatings;
   } catch {
-    return MOCK_PRODUCTS;
+    return [];
   }
 }
 
 async function getCategories() {
   try {
-    const categories = await db.category.findMany({
+    return await db.category.findMany({
       include: {
         _count: { select: { products: true } },
       },
       orderBy: { sortOrder: "asc" },
     });
-    if (categories.length === 0) return MOCK_CATEGORIES;
-    return categories;
   } catch {
-    return MOCK_CATEGORIES;
+    return [];
   }
 }
 

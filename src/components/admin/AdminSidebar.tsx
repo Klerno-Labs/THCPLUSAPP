@@ -29,7 +29,7 @@ interface NavItem {
   adminOnly?: boolean;
 }
 
-export type StaffRole = "OWNER" | "DEV" | "MANAGER" | "STAFF";
+export type StaffRole = "OWNER" | "MANAGER" | "STAFF";
 
 interface AdminSidebarProps {
   currentUser?: {
@@ -40,9 +40,9 @@ interface AdminSidebarProps {
   onSignOut?: () => void;
 }
 
-/** Returns true if the role has full admin access (Owner or Dev) */
+/** Returns true if the role has full admin access */
 export function isAdminRole(role: string): boolean {
-  return role === "OWNER" || role === "DEV";
+  return role === "OWNER";
 }
 
 // ─── Navigation Items ────────────────────────────────────
@@ -92,7 +92,6 @@ export default function AdminSidebar({
 
   const roleLabel: Record<string, string> = {
     OWNER: "Owner",
-    DEV: "Developer",
     MANAGER: "Manager",
     STAFF: "Staff",
   };

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { openai, ORDER_SCORING_PROMPT } from "@/lib/openai";
-import { pusherServer, CHANNELS, EVENTS } from "@/lib/pusher";
+import { getPusherServer, CHANNELS, EVENTS } from "@/lib/pusher";
 import type { AiOrderScore, OrderAiScoredEvent } from "@/types/app.types";
 
 interface ScoreOrderInput {
@@ -107,11 +107,12 @@ Score this order 1-10 and return your analysis as JSON with keys: score, flags, 
       flags: scoreData.flags,
     };
 
-    await pusherServer.trigger(
-      CHANNELS.adminAlerts,
-      EVENTS.orderAiScored,
-      alertPayload
-    );
+    const pusher = getPusherServer();
+    if (pusher) {
+      await pusher
+        .trigger(CHANNELS.adminAlerts, EVENTS.orderAiScored, alertPayload)
+        .catch((err) => console.error("Pusher trigger failed:", err));
+    }
 
     return NextResponse.json(scoreData);
   } catch (error) {

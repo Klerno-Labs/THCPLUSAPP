@@ -2,11 +2,11 @@
 
 import React, { useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
+import { signIn } from "next-auth/react";
 import { motion } from "framer-motion";
 import { Leaf, Mail, Lock, Eye, EyeOff, AlertCircle, Loader2, Shield } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { authenticateStaff } from "@/lib/staff-store";
 
 // ─── Admin Login Page ────────────────────────────────────
 export default function AdminLoginPage() {
@@ -38,27 +38,19 @@ export default function AdminLoginPage() {
       setLoading(true);
 
       try {
-        // Simulate auth delay
-        await new Promise((resolve) => setTimeout(resolve, 600));
+        const result = await signIn("staff-login", {
+          email,
+          password,
+          redirect: false,
+        });
 
-        // Authenticate against staff store (localStorage-backed)
-        const account = authenticateStaff(email, password);
-        if (!account) {
+        if (result?.error) {
           setError("Invalid email or password.");
           return;
         }
 
-        // Store session in localStorage
-        localStorage.setItem(
-          "thcplus-staff-session",
-          JSON.stringify({
-            name: account.name,
-            role: account.role,
-            email: account.email,
-          })
-        );
-
         router.push("/admin");
+        router.refresh();
       } catch {
         setError("An unexpected error occurred. Please try again.");
       } finally {
@@ -199,12 +191,12 @@ export default function AdminLoginPage() {
           <div className="mt-6 border-t border-emerald-900/20 pt-4">
             <p className="mb-3 flex items-center gap-1.5 text-xs font-semibold text-zinc-500">
               <Shield className="h-3 w-3" />
-              Demo Accounts
+              Staff Accounts
             </p>
             <div className="space-y-2">
               <button
                 type="button"
-                onClick={() => { setEmail("owner@thcplus.com"); setPassword("owner123"); setError(null); }}
+                onClick={() => { setEmail("owner@thcplus.com"); setPassword("thcplus2024"); setError(null); }}
                 className="flex w-full items-center justify-between rounded-lg border border-emerald-900/20 bg-[#090F09] px-3 py-2 text-left transition-colors hover:border-emerald-700/40"
               >
                 <div>
@@ -212,12 +204,12 @@ export default function AdminLoginPage() {
                   <p className="text-[10px] text-zinc-600">Full access to everything</p>
                 </div>
                 <span className="rounded-md bg-amber-500/10 px-1.5 py-0.5 text-[10px] font-bold text-amber-400">
-                  ADMIN
+                  OWNER
                 </span>
               </button>
               <button
                 type="button"
-                onClick={() => { setEmail("staff@thcplus.com"); setPassword("staff123"); setError(null); }}
+                onClick={() => { setEmail("staff@thcplus.com"); setPassword("staff2024"); setError(null); }}
                 className="flex w-full items-center justify-between rounded-lg border border-emerald-900/20 bg-[#090F09] px-3 py-2 text-left transition-colors hover:border-emerald-700/40"
               >
                 <div>

@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Inter, JetBrains_Mono } from "next/font/google";
 import { CartProvider } from "@/context/CartContext";
+import Providers from "@/components/Providers";
 import { Toaster } from "@/components/ui/toaster";
 import "./globals.css";
 
@@ -57,10 +58,12 @@ export default function RootLayout({
       <body
         className={`${inter.variable} ${jetbrainsMono.variable} font-sans antialiased bg-[#090F09] text-[#EBF0EB]`}
       >
-        <CartProvider>
-          {children}
-          <Toaster />
-        </CartProvider>
+        <Providers>
+          <CartProvider>
+            {children}
+            <Toaster />
+          </CartProvider>
+        </Providers>
       </body>
     </html>
   );

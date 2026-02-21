@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { pusherServer } from "@/lib/pusher";
+import { getPusherServer } from "@/lib/pusher";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 
@@ -36,7 +36,11 @@ export async function POST(request: NextRequest) {
         );
       }
 
-      const authResponse = pusherServer.authorizeChannel(
+      const pusher = getPusherServer();
+      if (!pusher) {
+        return NextResponse.json({ error: "Pusher not configured" }, { status: 503 });
+      }
+      const authResponse = pusher.authorizeChannel(
         socketId,
         channelName
       );
@@ -78,27 +82,27 @@ export async function POST(request: NextRequest) {
       if (session?.user) {
         const role = (session.user as any).role;
         if (["OWNER", "MANAGER", "STAFF"].includes(role)) {
-          const authResponse = pusherServer.authorizeChannel(
-            socketId,
-            channelName
-          );
+          const pusher = getPusherServer();
+          if (!pusher) {
+            return NextResponse.json({ error: "Pusher not configured" }, { status: 503 });
+          }
+          const authResponse = pusher.authorizeChannel(socketId, channelName);
           return NextResponse.json(authResponse);
         }
 
         // Customer can subscribe to their own order
         if (order.customerId && order.customerId === session.user.id) {
-          const authResponse = pusherServer.authorizeChannel(
-            socketId,
-            channelName
-          );
+          const pusher = getPusherServer();
+          if (!pusher) {
+            return NextResponse.json({ error: "Pusher not configured" }, { status: 503 });
+          }
+          const authResponse = pusher.authorizeChannel(socketId, channelName);
           return NextResponse.json(authResponse);
         }
       }
 
       // Guest users: check via guest session token from header
-      const guestSessionToken = request.headers.get(
-        "x-guest-session-token"
-      );
+      const guestSessionToken = request.headers.get("x-guest-session-token");
       if (guestSessionToken && order.guestSessionId) {
         const guestSession = await prisma.guestSession.findUnique({
           where: { sessionToken: guestSessionToken },
@@ -109,10 +113,11 @@ export async function POST(request: NextRequest) {
           guestSession.id === order.guestSessionId &&
           guestSession.expiresAt > new Date()
         ) {
-          const authResponse = pusherServer.authorizeChannel(
-            socketId,
-            channelName
-          );
+          const pusher = getPusherServer();
+          if (!pusher) {
+            return NextResponse.json({ error: "Pusher not configured" }, { status: 503 });
+          }
+          const authResponse = pusher.authorizeChannel(socketId, channelName);
           return NextResponse.json(authResponse);
         }
       }

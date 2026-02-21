@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
-import { kv } from "@vercel/kv";
 import { prisma } from "@/lib/db";
 import { createOrderSchema } from "@/lib/validations";
 import { generateOrderNumber } from "@/lib/utils";
-import { pusherServer, CHANNELS, EVENTS } from "@/lib/pusher";
+import { getPusherServer, CHANNELS, EVENTS } from "@/lib/pusher";
 import type { OrderCreatedEvent } from "@/types/app.types";
+
+export const dynamic = "force-dynamic";
 
 // ─── POST: Create New Order ─────────────────────────────
 export async function POST(request: NextRequest) {
@@ -34,27 +35,31 @@ export async function POST(request: NextRequest) {
       phone = guestPhone;
     }
 
-    // ── Rate Limit: max 3 orders per phone per hour ──
+    // ── Rate Limit: max 3 orders per phone per hour (graceful when KV not configured) ──
     if (phone) {
-      const rateLimitKey = `order-rate:${phone}`;
-      const current = await kv.get<number>(rateLimitKey);
+      try {
+        const { kv } = await import("@vercel/kv");
+        const rateLimitKey = `order-rate:${phone}`;
+        const current = await kv.get<number>(rateLimitKey);
 
-      if (current !== null && current >= 3) {
-        return NextResponse.json(
-          {
-            error: "Rate limit exceeded",
-            message:
-              "Maximum 3 orders per hour. Please wait before placing another order.",
-          },
-          { status: 429 }
-        );
-      }
+        if (current !== null && current >= 3) {
+          return NextResponse.json(
+            {
+              error: "Rate limit exceeded",
+              message:
+                "Maximum 3 orders per hour. Please wait before placing another order.",
+            },
+            { status: 429 }
+          );
+        }
 
-      // Increment count with 1-hour TTL
-      if (current === null) {
-        await kv.set(rateLimitKey, 1, { ex: 3600 });
-      } else {
-        await kv.incr(rateLimitKey);
+        if (current === null) {
+          await kv.set(rateLimitKey, 1, { ex: 3600 });
+        } else {
+          await kv.incr(rateLimitKey);
+        }
+      } catch {
+        // KV not configured — skip rate limiting
       }
     }
 
@@ -130,21 +135,22 @@ export async function POST(request: NextRequest) {
       return newOrder;
     });
 
-    // ── Trigger Pusher event for admin dashboard ──
-    const pusherPayload: OrderCreatedEvent = {
-      orderId: order.id,
-      orderNumber: order.orderNumber,
-      customerName:
-        order.customer?.name || order.guestName || "Guest",
-      totalItems: order.totalItems,
-      createdAt: order.createdAt.toISOString(),
-    };
+    // ── Trigger Pusher event for admin dashboard (graceful) ──
+    const pusher = getPusherServer();
+    if (pusher) {
+      const pusherPayload: OrderCreatedEvent = {
+        orderId: order.id,
+        orderNumber: order.orderNumber,
+        customerName:
+          order.customer?.name || order.guestName || "Guest",
+        totalItems: order.totalItems,
+        createdAt: order.createdAt.toISOString(),
+      };
 
-    await pusherServer.trigger(
-      CHANNELS.adminOrders,
-      EVENTS.orderCreated,
-      pusherPayload
-    );
+      await pusher
+        .trigger(CHANNELS.adminOrders, EVENTS.orderCreated, pusherPayload)
+        .catch((err) => console.error("Pusher trigger failed:", err));
+    }
 
     // ── Trigger AI scoring (fire and forget) ──
     const baseUrl =

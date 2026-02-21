@@ -1,6 +1,12 @@
 import twilio from "twilio";
 
 function getClient() {
+  if (
+    !process.env.TWILIO_ACCOUNT_SID ||
+    !process.env.TWILIO_AUTH_TOKEN
+  ) {
+    return null;
+  }
   return twilio(
     process.env.TWILIO_ACCOUNT_SID,
     process.env.TWILIO_AUTH_TOKEN
@@ -13,12 +19,26 @@ interface SendSmsParams {
 }
 
 export async function sendSms({ to, body }: SendSmsParams) {
+  const client = getClient();
+  if (!client) {
+    console.log("[Twilio] SMS skipped (not configured):", { to, body: body.slice(0, 50) });
+    return { success: false, error: "Twilio not configured" };
+  }
+
   try {
-    const message = await getClient().messages.create({
-      body,
-      from: process.env.TWILIO_PHONE_NUMBER,
-      to,
-    });
+    const createParams: Record<string, string> = { body, to };
+
+    // Prefer Messaging Service SID (handles number rotation + compliance)
+    if (process.env.TWILIO_MESSAGING_SERVICE_SID) {
+      createParams.messagingServiceSid = process.env.TWILIO_MESSAGING_SERVICE_SID;
+    } else if (process.env.TWILIO_PHONE_NUMBER) {
+      createParams.from = process.env.TWILIO_PHONE_NUMBER;
+    } else {
+      console.log("[Twilio] SMS skipped (no from number or messaging service):", { to });
+      return { success: false, error: "No sender configured" };
+    }
+
+    const message = await client.messages.create(createParams);
     return { success: true, sid: message.sid };
   } catch (error) {
     console.error("Twilio SMS error:", error);

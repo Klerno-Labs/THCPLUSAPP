@@ -1,7 +1,8 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React from "react";
 import { usePathname, useRouter } from "next/navigation";
+import { useSession, signOut } from "next-auth/react";
 import AdminSidebar, {
   isAdminRole,
   type StaffRole,
@@ -16,23 +17,6 @@ const ADMIN_ONLY_ROUTES = [
   "/admin/export",
 ];
 
-interface StaffSession {
-  name: string;
-  role: StaffRole;
-  email: string;
-}
-
-function getStaffSession(): StaffSession {
-  if (typeof window === "undefined") {
-    return { name: "", role: "STAFF", email: "" };
-  }
-  try {
-    const raw = localStorage.getItem("thcplus-staff-session");
-    if (raw) return JSON.parse(raw);
-  } catch {}
-  return { name: "Staff User", role: "STAFF", email: "" };
-}
-
 // ─── Admin Layout ─────────────────────────────────────────
 export default function AdminLayout({
   children,
@@ -41,38 +25,15 @@ export default function AdminLayout({
 }) {
   const router = useRouter();
   const pathname = usePathname();
-  const [session, setSession] = useState<StaffSession | null>(null);
-
-  useEffect(() => {
-    const s = getStaffSession();
-    setSession(s);
-  }, [pathname]);
-
-  // Route guard: redirect staff away from admin-only pages
-  useEffect(() => {
-    if (!session) return;
-    if (!isAdminRole(session.role)) {
-      const isAdminRoute = ADMIN_ONLY_ROUTES.some((r) =>
-        pathname.startsWith(r)
-      );
-      if (isAdminRoute) {
-        router.replace("/admin");
-      }
-    }
-  }, [session, pathname, router]);
-
-  const handleSignOut = () => {
-    localStorage.removeItem("thcplus-staff-session");
-    window.location.href = "/admin/login";
-  };
+  const { data: session, status } = useSession();
 
   // Login page renders without the sidebar wrapper
   if (pathname === "/admin/login") {
     return <>{children}</>;
   }
 
-  // Don't render until session is loaded (prevents flash)
-  if (!session) {
+  // Loading state
+  if (status === "loading") {
     return (
       <div className="flex min-h-screen items-center justify-center bg-[#090F09]">
         <div className="h-8 w-8 animate-spin rounded-full border-2 border-emerald-500 border-t-transparent" />
@@ -80,13 +41,43 @@ export default function AdminLayout({
     );
   }
 
+  // Not authenticated — redirect to login
+  if (status === "unauthenticated" || !session?.user) {
+    router.replace("/admin/login");
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-[#090F09]">
+        <div className="h-8 w-8 animate-spin rounded-full border-2 border-emerald-500 border-t-transparent" />
+      </div>
+    );
+  }
+
+  const userRole = (session.user as any).role as StaffRole;
+  const userName = session.user.name || "Staff";
+  const userEmail = session.user.email || "";
+
+  // Route guard: redirect staff away from admin-only pages
+  const userIsAdmin = isAdminRole(userRole);
+  if (!userIsAdmin) {
+    const isAdminRoute = ADMIN_ONLY_ROUTES.some((r) =>
+      pathname.startsWith(r)
+    );
+    if (isAdminRoute) {
+      router.replace("/admin");
+      return null;
+    }
+  }
+
+  const handleSignOut = () => {
+    signOut({ callbackUrl: "/admin/login" });
+  };
+
   return (
     <div className="flex min-h-screen bg-[#090F09]">
       <AdminSidebar
         currentUser={{
-          name: session.name,
-          role: session.role,
-          email: session.email,
+          name: userName,
+          role: userRole,
+          email: userEmail,
         }}
         onSignOut={handleSignOut}
       />

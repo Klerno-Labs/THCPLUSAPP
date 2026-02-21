@@ -14,6 +14,8 @@ export function usePusherChannel(
 
   useEffect(() => {
     const pusher = getPusherClient();
+    if (!pusher) return;
+
     const channel: Channel = pusher.subscribe(channelName);
 
     const handler = (data: any) => {

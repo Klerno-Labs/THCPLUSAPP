@@ -95,6 +95,9 @@ async function main() {
   const concentrates = categories[1];
   const preRolls = categories[2];
 
+  // Clear existing products for clean re-seed
+  await prisma.product.deleteMany({});
+
   const products = await Promise.all([
     // ── Flower (9 products) ────────────────────────────
     prisma.product.create({
@@ -400,6 +403,7 @@ async function main() {
   console.log(`Created ${staff.length} staff users`);
 
   // ─── Hero Banner ─────────────────────────────────────
+  await prisma.heroBanner.deleteMany({});
   await prisma.heroBanner.create({
     data: {
       titleEn: "Premium Hemp, Ready When You Are",

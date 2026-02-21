@@ -136,20 +136,8 @@ export interface OrderAiScoredEvent {
 // ─── Session Extension ───────────────────────────────────
 
 declare module "next-auth" {
-  interface Session {
-    user: {
-      id: string;
-      name?: string | null;
-      email?: string | null;
-      role?: string;
-      phone?: string;
-    };
-  }
-
   interface User {
     role?: string;
     phone?: string;
   }
 }
-
-// JWT type is extended via the callbacks in lib/auth.ts

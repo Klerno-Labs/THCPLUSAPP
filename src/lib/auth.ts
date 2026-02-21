@@ -71,7 +71,7 @@ export const {
         return {
           id: customer.id,
           name: customer.name,
-          email: customer.email || undefined,
+          email: customer.email || "",
           phone: customer.phone,
           role: "CUSTOMER",
         };
