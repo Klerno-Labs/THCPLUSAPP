@@ -2,26 +2,211 @@
 @tailwind components;
 @tailwind utilities;
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
-@media (prefers-color-scheme: dark) {
+@layer base {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+    /* THC Plus Brand — Premium Dark Theme */
+    /* Extracted from shopthcplus.com: Dark Forest Green + Gold + Emerald */
+    --background: 140 20% 4%;          /* #090F09 — near-black green */
+    --foreground: 140 10% 93%;         /* #EBF0EB — soft white-green */
+    --surface: 140 15% 8%;             /* #111A11 — dark green surface */
+
+    --card: 140 15% 8%;
+    --card-foreground: 140 10% 93%;
+
+    --popover: 140 15% 10%;
+    --popover-foreground: 140 10% 93%;
+
+    --primary: 160 84% 39%;            /* #10B981 — vibrant emerald */
+    --primary-foreground: 140 20% 4%;  /* dark on bright green */
+
+    --secondary: 43 72% 52%;           /* #D4AF37 — brand gold */
+    --secondary-foreground: 140 20% 4%;
+
+    --muted: 140 10% 15%;
+    --muted-foreground: 140 5% 55%;
+
+    --accent: 140 15% 12%;
+    --accent-foreground: 140 10% 93%;
+
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 140 10% 16%;
+    --input: 140 10% 16%;
+    --ring: 160 84% 39%;
+
+    --radius: 0.75rem;
+
+    /* Brand-specific tokens */
+    --color-background: hsl(140, 20%, 4%);
+    --color-surface: hsl(140, 15%, 8%);
+    --color-primary: hsl(160, 84%, 39%);
+    --color-primary-hover: hsl(160, 84%, 45%);
+    --color-primary-glow: hsla(160, 84%, 39%, 0.15);
+    --color-text-primary: hsl(140, 10%, 93%);
+    --color-text-secondary: hsl(140, 5%, 70%);
+    --color-text-muted: hsl(140, 5%, 45%);
+    --color-border: hsl(140, 10%, 16%);
+    --color-error: hsl(0, 84%, 60%);
+    --color-warning: hsl(43, 72%, 52%);
+    --color-success: hsl(160, 84%, 39%);
+    --color-gold: hsl(43, 72%, 52%);
   }
 }
 
-body {
-  color: var(--foreground);
-  background: var(--background);
-  font-family: Arial, Helvetica, sans-serif;
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground antialiased;
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
+
+  /* Custom scrollbar — dark theme */
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: hsl(140, 15%, 6%);
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: hsl(140, 10%, 20%);
+    border-radius: 3px;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: hsl(140, 10%, 28%);
+  }
+
+  /* Selection highlight */
+  ::selection {
+    background: hsla(160, 84%, 39%, 0.3);
+    color: hsl(140, 10%, 93%);
+  }
+}
+
+@layer components {
+  /* Shimmer skeleton effect */
+  .skeleton {
+    @apply relative overflow-hidden;
+    background: linear-gradient(
+      90deg,
+      hsl(140, 15%, 8%) 0%,
+      hsl(140, 15%, 12%) 50%,
+      hsl(140, 15%, 8%) 100%
+    );
+    background-size: 200% 100%;
+    animation: shimmer 2s infinite linear;
+  }
+
+  /* Glass effect card */
+  .glass-card {
+    @apply rounded-lg border border-border/50;
+    background: hsla(140, 15%, 8%, 0.8);
+    backdrop-filter: blur(12px);
+  }
+
+  /* Glow effect */
+  .glow-primary {
+    box-shadow: 0 0 20px hsla(160, 84%, 39%, 0.15);
+  }
+
+  .glow-primary-hover:hover {
+    box-shadow: 0 0 30px hsla(160, 84%, 39%, 0.25);
+  }
+
+  .glow-gold {
+    box-shadow: 0 0 20px hsla(43, 72%, 52%, 0.15);
+  }
+
+  .glow-gold-hover:hover {
+    box-shadow: 0 0 30px hsla(43, 72%, 52%, 0.25);
+  }
+
+  /* Gold gradient text */
+  .text-gold-gradient {
+    background: linear-gradient(135deg, #D4AF37 0%, #F4D03F 50%, #D4AF37 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  /* Gold shimmer button */
+  .btn-gold {
+    background: linear-gradient(135deg, #D4AF37 0%, #F4D03F 50%, #D4AF37 100%);
+    background-size: 200% auto;
+    color: #090F09;
+    font-weight: 700;
+    transition: background-position 0.3s ease;
+  }
+
+  .btn-gold:hover {
+    background-position: right center;
+  }
+
+  /* Status badge colors */
+  .status-pending {
+    @apply bg-yellow-500/10 text-yellow-400 border-yellow-500/20;
+  }
+
+  .status-confirmed {
+    @apply bg-blue-500/10 text-blue-400 border-blue-500/20;
+  }
+
+  .status-preparing {
+    @apply bg-orange-500/10 text-orange-400 border-orange-500/20;
+  }
+
+  .status-ready {
+    @apply bg-emerald-500/10 text-emerald-400 border-emerald-500/20;
+  }
+
+  .status-picked-up {
+    @apply bg-emerald-600/10 text-emerald-300 border-emerald-600/20;
+  }
+
+  .status-cancelled {
+    @apply bg-red-500/10 text-red-400 border-red-500/20;
+  }
+
+  .status-expired {
+    @apply bg-gray-500/10 text-gray-400 border-gray-500/20;
+  }
+
+  /* Loyalty tier badges */
+  .tier-seedling {
+    @apply bg-emerald-900/30 text-emerald-400 border-emerald-700/30;
+  }
+
+  .tier-grower {
+    @apply bg-emerald-800/30 text-emerald-300 border-emerald-600/30;
+  }
+
+  .tier-cultivator {
+    @apply bg-gold-900/30 text-gold-400 border-gold-700/30;
+  }
+
+  .tier-master-grower {
+    @apply bg-gold-800/30 text-gold-300 border-gold-500/30;
+  }
 }
 
 @layer utilities {
   .text-balance {
     text-wrap: balance;
+  }
+
+  /* Hide scrollbar but keep functionality */
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
   }
 }

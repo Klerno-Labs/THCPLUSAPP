@@ -1,0 +1,343 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("POSTGRES_PRISMA_URL")
+  directUrl = env("POSTGRES_URL_NON_POOLING")
+}
+
+// ─── Enums ───────────────────────────────────────────────
+
+enum OrderStatus {
+  PENDING
+  CONFIRMED
+  PREPARING
+  READY
+  PICKED_UP
+  CANCELLED
+  EXPIRED
+}
+
+enum LoyaltyTier {
+  SEEDLING
+  GROWER
+  CULTIVATOR
+  MASTER_GROWER
+}
+
+enum StaffRole {
+  OWNER
+  MANAGER
+  STAFF
+}
+
+enum StrainType {
+  SATIVA
+  INDICA
+  HYBRID
+  CBD
+}
+
+enum LoyaltyTransactionType {
+  EARNED
+  REDEEMED
+  BONUS
+  ADJUSTMENT
+}
+
+enum PromotionType {
+  SMS
+  IN_APP
+  BOTH
+}
+
+// ─── Profile (Customer Account) ──────────────────────────
+
+model Profile {
+  id                  String               @id @default(cuid())
+  name                String
+  phone               String               @unique
+  email               String?              @unique
+  dateOfBirth         DateTime?
+  preferredLanguage   String               @default("en")
+  loyaltyPoints       Int                  @default(0)
+  loyaltyTier         LoyaltyTier          @default(SEEDLING)
+  hashedPassword      String?
+  createdAt           DateTime             @default(now())
+  updatedAt           DateTime             @updatedAt
+
+  orders              Order[]
+  loyaltyTransactions LoyaltyTransaction[]
+  reviews             Review[]
+  favorites           Favorite[]
+
+  @@index([phone])
+  @@index([email])
+}
+
+// ─── Guest Session ───────────────────────────────────────
+
+model GuestSession {
+  id           String   @id @default(cuid())
+  name         String
+  phone        String
+  sessionToken String   @unique
+  expiresAt    DateTime
+  createdAt    DateTime @default(now())
+
+  orders       Order[]
+
+  @@index([sessionToken])
+  @@index([expiresAt])
+}
+
+// ─── Product ─────────────────────────────────────────────
+
+model Product {
+  id             String     @id @default(cuid())
+  name           String
+  nameEs         String?
+  categoryId     String
+  category       Category   @relation(fields: [categoryId], references: [id])
+  descriptionEn  String?    @db.Text
+  descriptionEs  String?    @db.Text
+  price          Float
+  thcPercentage  Float?
+  cbdPercentage  Float?
+  strainType     StrainType?
+  weight         String?
+  imageUrl       String?
+  inStock        Boolean    @default(true)
+  quantity       Int        @default(0)
+  isFeatured     Boolean    @default(false)
+  sortOrder      Int        @default(0)
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
+
+  orderItems     OrderItem[]
+  reviews        Review[]
+  favorites      Favorite[]
+
+  @@index([categoryId])
+  @@index([inStock])
+  @@index([isFeatured])
+  @@index([name])
+}
+
+// ─── Category ────────────────────────────────────────────
+
+model Category {
+  id        String    @id @default(cuid())
+  nameEn    String
+  nameEs    String?
+  slug      String    @unique
+  icon      String?
+  sortOrder Int       @default(0)
+  products  Product[]
+}
+
+// ─── Order ───────────────────────────────────────────────
+
+model Order {
+  id                 String        @id @default(cuid())
+  orderNumber        String        @unique
+  customerId         String?
+  customer           Profile?      @relation(fields: [customerId], references: [id])
+  guestSessionId     String?
+  guestSession       GuestSession? @relation(fields: [guestSessionId], references: [id])
+  guestName          String?
+  guestPhone         String?
+  status             OrderStatus   @default(PENDING)
+  totalItems         Int           @default(0)
+  estimatedReadyTime DateTime?
+  confirmedAt        DateTime?
+  readyAt            DateTime?
+  pickedUpAt         DateTime?
+  expiresAt          DateTime?
+  cancelledAt        DateTime?
+  cancelReason       String?
+  staffNotes         String?       @db.Text
+  aiPriorityScore    Int?
+  createdAt          DateTime      @default(now())
+  updatedAt          DateTime      @updatedAt
+
+  items              OrderItem[]
+  statusHistory      OrderStatusHistory[]
+
+  @@index([status])
+  @@index([expiresAt])
+  @@index([createdAt])
+  @@index([orderNumber])
+  @@index([customerId])
+  @@index([guestSessionId])
+}
+
+// ─── Order Item ──────────────────────────────────────────
+
+model OrderItem {
+  id               String  @id @default(cuid())
+  orderId          String
+  order            Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  productId        String
+  product          Product @relation(fields: [productId], references: [id])
+  quantity         Int
+  unitPriceAtOrder Float
+  productSnapshot  Json?
+
+  @@index([orderId])
+  @@index([productId])
+}
+
+// ─── Order Status History ────────────────────────────────
+
+model OrderStatusHistory {
+  id        String      @id @default(cuid())
+  orderId   String
+  order     Order       @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  status    OrderStatus
+  changedBy String?
+  note      String?
+  createdAt DateTime    @default(now())
+
+  @@index([orderId])
+}
+
+// ─── Review ──────────────────────────────────────────────
+
+model Review {
+  id                 String   @id @default(cuid())
+  productId          String
+  product            Product  @relation(fields: [productId], references: [id])
+  customerId         String
+  customer           Profile  @relation(fields: [customerId], references: [id])
+  rating             Int
+  body               String?  @db.Text
+  isVerifiedPurchase Boolean  @default(false)
+  createdAt          DateTime @default(now())
+
+  @@index([productId])
+  @@index([customerId])
+}
+
+// ─── Favorite ────────────────────────────────────────────
+
+model Favorite {
+  id         String   @id @default(cuid())
+  customerId String
+  customer   Profile  @relation(fields: [customerId], references: [id])
+  productId  String
+  product    Product  @relation(fields: [productId], references: [id])
+  createdAt  DateTime @default(now())
+
+  @@unique([customerId, productId])
+}
+
+// ─── Loyalty Transaction ─────────────────────────────────
+
+model LoyaltyTransaction {
+  id          String                 @id @default(cuid())
+  customerId  String
+  customer    Profile                @relation(fields: [customerId], references: [id])
+  points      Int
+  type        LoyaltyTransactionType
+  description String
+  orderId     String?
+  createdAt   DateTime               @default(now())
+
+  @@index([customerId])
+}
+
+// ─── Promotion ───────────────────────────────────────────
+
+model Promotion {
+  id              String        @id @default(cuid())
+  titleEn         String
+  titleEs         String?
+  bodyEn          String        @db.Text
+  bodyEs          String?       @db.Text
+  type            PromotionType @default(BOTH)
+  sentAt          DateTime?
+  createdById     String
+  createdBy       StaffUser     @relation(fields: [createdById], references: [id])
+  targetAudience  String?
+  createdAt       DateTime      @default(now())
+}
+
+// ─── Staff User ──────────────────────────────────────────
+
+model StaffUser {
+  id               String             @id @default(cuid())
+  name             String
+  email            String             @unique
+  role             StaffRole          @default(STAFF)
+  hashedPassword   String
+  isActive         Boolean            @default(true)
+  createdAt        DateTime           @default(now())
+
+  promotions       Promotion[]
+  staffPerformance StaffPerformance[]
+
+  @@index([email])
+}
+
+// ─── Staff Performance ───────────────────────────────────
+
+model StaffPerformance {
+  id                        String   @id @default(cuid())
+  staffId                   String
+  staff                     StaffUser @relation(fields: [staffId], references: [id])
+  ordersProcessed           Int      @default(0)
+  avgProcessingTimeSeconds  Int      @default(0)
+  date                      DateTime @db.Date
+
+  @@unique([staffId, date])
+  @@index([staffId])
+  @@index([date])
+}
+
+// ─── Analytics Daily ─────────────────────────────────────
+
+model AnalyticsDaily {
+  id              String   @id @default(cuid())
+  date            DateTime @unique @db.Date
+  totalOrders     Int      @default(0)
+  completedOrders Int      @default(0)
+  cancelledOrders Int      @default(0)
+  topProducts     Json?
+  peakHour        Int?
+  aiInsights      Json?
+  createdAt       DateTime @default(now())
+
+  @@index([date])
+}
+
+// ─── Hero Banner ─────────────────────────────────────────
+
+model HeroBanner {
+  id        String   @id @default(cuid())
+  titleEn   String
+  titleEs   String?
+  bodyEn    String?  @db.Text
+  bodyEs    String?  @db.Text
+  imageUrl  String?
+  isActive  Boolean  @default(true)
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// ─── Chat History ────────────────────────────────────────
+
+model ChatHistory {
+  id         String   @id @default(cuid())
+  customerId String?
+  sessionId  String?
+  role       String
+  content    String   @db.Text
+  createdAt  DateTime @default(now())
+
+  @@index([customerId])
+  @@index([sessionId])
+}

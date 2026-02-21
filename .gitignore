@@ -34,3 +34,12 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# claude code
+.claude/
+
+# cloned assets repo
+THCPLUS-repo/
+
+# messages / logs
+messages/
