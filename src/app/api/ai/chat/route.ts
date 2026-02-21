@@ -253,10 +253,16 @@ export async function POST(request: NextRequest) {
         Connection: "keep-alive",
       },
     });
-  } catch (error) {
-    console.error("POST /api/ai/chat error:", error);
+  } catch (error: any) {
+    const errMsg = error?.message || String(error);
+    const errStatus = error?.status || error?.response?.status;
+    console.error("POST /api/ai/chat error:", errMsg, "| status:", errStatus, "| key set:", !!process.env.OPENAI_API_KEY);
     return new Response(
-      JSON.stringify({ error: "Failed to process chat message" }),
+      JSON.stringify({
+        error: "Failed to process chat message",
+        detail: errMsg,
+        keyPresent: !!process.env.OPENAI_API_KEY,
+      }),
       { status: 500, headers: { "Content-Type": "application/json" } }
     );
   }
