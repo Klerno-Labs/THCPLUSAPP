@@ -12,78 +12,18 @@ import {
   BarChart3,
   Loader2,
   CheckCircle2,
+  Clock,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { useToast } from "@/components/ui/use-toast";
 
 // ─── Types ───────────────────────────────────────────────
 type ExportFormat = "csv" | "pdf";
 type ExportType = "orders" | "customers" | "analytics";
 
-// Used when real export jobs are tracked
-interface _ExportJob {
-  id: string;
-  type: ExportType;
-  format: ExportFormat;
-  status: "idle" | "loading" | "done";
-  dateFrom?: string;
-  dateTo?: string;
-  filename?: string;
-}
-
 // ─── Helpers ─────────────────────────────────────────────
-function generateMockCSV(type: ExportType): string {
-  switch (type) {
-    case "orders":
-      return [
-        "Order Number,Customer,Date,Items,Total,Status",
-        "THC-A1B2,Sarah Martinez,2025-02-19,4,$143.00,Pending",
-        "THC-C3D4,James Wilson,2025-02-18,2,$97.00,Pending",
-        "THC-E5F6,Maria Rodriguez,2025-02-19,3,$85.00,Confirmed",
-        "THC-G7H8,David Chen,2025-02-19,4,$161.00,Preparing",
-        "THC-I9J0,Ashley Thompson,2025-02-19,3,$36.00,Ready",
-        "THC-K1L2,Kevin Brown,2025-02-19,4,$156.00,Pending",
-        "THC-M3N4,Lisa Park,2025-02-18,1,$40.00,Picked Up",
-        "THC-O5P6,Mike Johnson,2025-02-17,2,$88.00,Picked Up",
-        "THC-Q7R8,Emma Davis,2025-02-17,3,$125.00,Picked Up",
-        "THC-S9T0,Carlos Hernandez,2025-02-16,1,$42.00,Picked Up",
-      ].join("\n");
-    case "customers":
-      return [
-        "Name,Phone,Email,Tier,Points,Total Orders,Total Spent,Joined",
-        'Sarah Martinez,(555) 123-4567,sarah.m@email.com,Master Grower,842,67,"$4,280.00",2024-03-15',
-        "James Wilson,(555) 234-5678,jwilson@email.com,Seedling,12,1,$97.00,2025-02-18",
-        'Maria Rodriguez,(555) 345-6789,maria.r@email.com,Cultivator,256,34,"$2,150.00",2024-06-22',
-        "David Chen,(555) 456-7890,d.chen@email.com,Grower,78,12,$780.00,2024-09-10",
-        "Ashley Thompson,(555) 567-8901,ashley.t@email.com,Grower,45,8,$320.00,2024-11-01",
-        'Kevin Brown,(555) 678-9012,,Cultivator,190,28,"$1,890.00",2024-05-18',
-      ].join("\n");
-    case "analytics":
-      return [
-        "Metric,Value,Change",
-        "Total Orders (30d),890,+12.5%",
-        "Completed Orders,842,+8.3%",
-        "Avg Processing Time,8.2 min,-15.4%",
-        "Completion Rate,94.6%,+1.2%",
-        "Revenue (30d),$52840.00,+18.7%",
-        "New Customers (30d),87,+22.1%",
-        "Repeat Customer Rate,68.4%,+3.5%",
-        "Top Product,Blue Dream 3.5g,145 units",
-        "Top Category,Flower,38%",
-        "Peak Hour,2:00 PM,avg 8.2 orders",
-      ].join("\n");
-    default:
-      return "";
-  }
-}
-
-function generateMockPDFContent(_type: ExportType): string {
-  // In production, this would generate a real PDF via a server action
-  // For now, return a text representation
-  return "PDF generation would happen server-side using a library like puppeteer or jsPDF.";
-}
-
 function downloadBlob(content: string, filename: string, mimeType: string) {
   const blob = new Blob([content], { type: mimeType });
   const url = URL.createObjectURL(blob);
@@ -94,6 +34,52 @@ function downloadBlob(content: string, filename: string, mimeType: string) {
   a.click();
   document.body.removeChild(a);
   URL.revokeObjectURL(url);
+}
+
+function customersToCSV(customers: any[]): string {
+  const headers = [
+    "Name",
+    "Phone",
+    "Email",
+    "Loyalty Tier",
+    "Loyalty Points",
+    "Total Orders",
+    "Total Spent",
+    "Joined At",
+    "Last Order At",
+    "Staff Notes",
+  ];
+
+  const escapeCsv = (value: string | number | null | undefined): string => {
+    if (value === null || value === undefined) return "";
+    const str = String(value);
+    if (str.includes(",") || str.includes('"') || str.includes("\n")) {
+      return `"${str.replace(/"/g, '""')}"`;
+    }
+    return str;
+  };
+
+  const rows = customers.map((c) => [
+    escapeCsv(c.name),
+    escapeCsv(c.phone),
+    escapeCsv(c.email),
+    escapeCsv(c.loyaltyTier),
+    escapeCsv(c.loyaltyPoints),
+    escapeCsv(c.totalOrders),
+    escapeCsv(
+      c.totalSpent != null
+        ? `$${Number(c.totalSpent).toFixed(2)}`
+        : ""
+    ),
+    escapeCsv(c.joinedAt ? c.joinedAt.split("T")[0] : ""),
+    escapeCsv(c.lastOrderAt ? c.lastOrderAt.split("T")[0] : ""),
+    escapeCsv(c.staffNotes),
+  ]);
+
+  return [
+    headers.map(escapeCsv).join(","),
+    ...rows.map((row) => row.join(",")),
+  ].join("\n");
 }
 
 // ─── Export Section Component ────────────────────────────
@@ -116,31 +102,71 @@ function ExportSection({
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
   const [status, setStatus] = useState<"idle" | "loading" | "done">("idle");
+  const { toast } = useToast();
 
   const handleExport = useCallback(async () => {
-    setStatus("loading");
-
-    // Simulate export generation time
-    await new Promise((resolve) => setTimeout(resolve, 1500));
-
-    const dateStr = new Date().toISOString().split("T")[0];
-
-    if (format === "csv") {
-      const content = generateMockCSV(type);
-      const filename = `thc-plus-${type}-${dateStr}.csv`;
-      downloadBlob(content, filename, "text/csv");
-    } else {
-      // In production, this would trigger a server action to generate a PDF
-      const content = generateMockPDFContent(type);
-      const filename = `thc-plus-${type}-${dateStr}.txt`;
-      downloadBlob(content, filename, "text/plain");
+    // PDF export is not yet available — show a toast and bail out early
+    if (format === "pdf") {
+      toast({
+        title: "PDF export coming soon",
+        description:
+          "PDF generation is not yet available. Please export as CSV instead.",
+      });
+      return;
     }
 
-    setStatus("done");
+    setStatus("loading");
 
-    // Reset after showing success
-    setTimeout(() => setStatus("idle"), 2500);
-  }, [format, type]);
+    try {
+      const dateStr = new Date().toISOString().split("T")[0];
+
+      if (type === "orders") {
+        const params = new URLSearchParams({ format: "csv" });
+        if (dateFrom) params.set("startDate", dateFrom);
+        if (dateTo) params.set("endDate", dateTo);
+
+        const res = await fetch(`/api/export/orders?${params.toString()}`);
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({}));
+          throw new Error(err?.error ?? `Request failed with status ${res.status}`);
+        }
+        const csvText = await res.text();
+        downloadBlob(csvText, `thc-plus-orders-${dateStr}.csv`, "text/csv");
+      } else if (type === "analytics") {
+        const params = new URLSearchParams({ format: "csv" });
+        if (dateFrom) params.set("startDate", dateFrom);
+        if (dateTo) params.set("endDate", dateTo);
+
+        const res = await fetch(`/api/export/analytics?${params.toString()}`);
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({}));
+          throw new Error(err?.error ?? `Request failed with status ${res.status}`);
+        }
+        const csvText = await res.text();
+        downloadBlob(csvText, `thc-plus-analytics-${dateStr}.csv`, "text/csv");
+      } else if (type === "customers") {
+        const res = await fetch("/api/customers");
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({}));
+          throw new Error(err?.error ?? `Request failed with status ${res.status}`);
+        }
+        const customers = await res.json();
+        const csvText = customersToCSV(customers);
+        downloadBlob(csvText, `thc-plus-customers-${dateStr}.csv`, "text/csv");
+      }
+
+      setStatus("done");
+      setTimeout(() => setStatus("idle"), 2500);
+    } catch (err: any) {
+      console.error("Export error:", err);
+      toast({
+        title: "Export failed",
+        description: err?.message ?? "An unexpected error occurred.",
+        variant: "destructive",
+      });
+      setStatus("idle");
+    }
+  }, [format, type, dateFrom, dateTo, toast]);
 
   return (
     <motion.div
@@ -220,34 +246,44 @@ function ExportSection({
               </button>
             </div>
 
+            {/* PDF coming-soon badge */}
+            {format === "pdf" && (
+              <span className="flex items-center gap-1 rounded-md bg-zinc-800/60 px-2 py-1 text-xs text-zinc-500">
+                <Clock className="h-3 w-3" />
+                Coming soon
+              </span>
+            )}
+
             {/* Download Button */}
-            <Button
-              size="sm"
-              onClick={handleExport}
-              disabled={status === "loading"}
-              className={cn(
-                "gap-2 transition-all",
-                status === "done" &&
-                  "bg-emerald-600/20 text-emerald-400 hover:bg-emerald-600/20"
-              )}
-            >
-              {status === "loading" ? (
-                <>
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  Generating...
-                </>
-              ) : status === "done" ? (
-                <>
-                  <CheckCircle2 className="h-4 w-4" />
-                  Downloaded!
-                </>
-              ) : (
-                <>
-                  <Download className="h-4 w-4" />
-                  Download {format.toUpperCase()}
-                </>
-              )}
-            </Button>
+            {format === "csv" && (
+              <Button
+                size="sm"
+                onClick={handleExport}
+                disabled={status === "loading"}
+                className={cn(
+                  "gap-2 transition-all",
+                  status === "done" &&
+                    "bg-emerald-600/20 text-emerald-400 hover:bg-emerald-600/20"
+                )}
+              >
+                {status === "loading" ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Generating...
+                  </>
+                ) : status === "done" ? (
+                  <>
+                    <CheckCircle2 className="h-4 w-4" />
+                    Downloaded!
+                  </>
+                ) : (
+                  <>
+                    <Download className="h-4 w-4" />
+                    Download CSV
+                  </>
+                )}
+              </Button>
+            )}
           </div>
         </div>
       </div>
@@ -266,7 +302,7 @@ export default function ExportPage() {
           Export Data
         </h1>
         <p className="mt-1 text-sm text-zinc-500">
-          Download your data as CSV or PDF for reporting and analysis
+          Download your data as CSV for reporting and analysis
         </p>
       </div>
 
@@ -309,13 +345,13 @@ export default function ExportPage() {
           </li>
           <li className="flex items-start gap-2">
             <span className="mt-1 block h-1 w-1 shrink-0 rounded-full bg-emerald-600" />
-            PDF exports include formatted tables and summary statistics
-            suitable for printing.
+            PDF exports are coming soon and will include formatted tables and
+            summary statistics suitable for printing.
           </li>
           <li className="flex items-start gap-2">
             <span className="mt-1 block h-1 w-1 shrink-0 rounded-full bg-emerald-600" />
-            All exports are generated client-side. No data leaves your browser
-            except through the download.
+            Orders and analytics exports are fetched live from the server.
+            Customer exports are assembled client-side from live data.
           </li>
           <li className="flex items-start gap-2">
             <span className="mt-1 block h-1 w-1 shrink-0 rounded-full bg-emerald-600" />

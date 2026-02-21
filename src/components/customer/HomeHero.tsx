@@ -53,7 +53,7 @@ export default function HomeHero({ banners }: HomeHeroProps) {
               alt="THC Plus"
               width={48}
               height={48}
-              className="h-12 w-12 invert opacity-60"
+              className="h-12 w-12 brightness-0 invert opacity-60"
             />
           </motion.div>
 
@@ -102,7 +102,7 @@ export default function HomeHero({ banners }: HomeHeroProps) {
             transition={{ duration: 0.6, delay: 0.35 }}
             className="mt-8"
           >
-            <Button asChild size="lg" className="group btn-gold rounded-full px-8 text-base">
+            <Button asChild size="lg" className="group btn-gold rounded-full px-8 text-base h-12 w-full sm:w-auto">
               <Link href="/products">
                 Browse Menu
                 <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
@@ -115,7 +115,7 @@ export default function HomeHero({ banners }: HomeHeroProps) {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.5 }}
-            className="mt-14 grid w-full max-w-2xl grid-cols-3 gap-4 sm:gap-8"
+            className="mt-14 grid w-full max-w-2xl grid-cols-3 gap-3 sm:gap-8"
           >
             {[
               {

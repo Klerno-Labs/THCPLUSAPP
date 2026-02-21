@@ -77,7 +77,7 @@ export default function FeaturedProducts({ products }: FeaturedProductsProps) {
           {/* Horizontal scroll */}
           <div
             ref={scrollRef}
-            className="no-scrollbar -mx-4 flex gap-4 overflow-x-auto px-4 pb-4 sm:-mx-0 sm:px-0"
+            className="no-scrollbar touch-scroll-x -mx-4 flex gap-4 overflow-x-auto px-4 pb-4 sm:-mx-0 sm:px-0"
           >
             {products.map((product, i) => (
               <motion.div

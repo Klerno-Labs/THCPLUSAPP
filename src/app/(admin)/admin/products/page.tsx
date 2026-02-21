@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useCallback, useMemo } from "react";
+import React, { useState, useCallback, useMemo, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Package,
@@ -15,250 +15,121 @@ import {
   ArrowUpDown,
   Check,
   Image as ImageIcon,
+  Loader2,
 } from "lucide-react";
+import Image from "next/image";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 
 // ─── Types ───────────────────────────────────────────────
+interface Category {
+  id: string;
+  nameEn: string;
+}
+
 interface Product {
   id: string;
   name: string;
-  category: string;
+  categoryId: string;
+  category: Category;
   price: number;
   quantity: number;
   inStock: boolean;
-  thcContent?: string;
-  cbdContent?: string;
-  strain?: string;
+  thcPercentage: number | null;
+  cbdPercentage: number | null;
+  strainType: string | null;
+  weight: string | null;
   imageUrl?: string;
-  sku: string;
+  descriptionEn?: string;
+  isFeatured?: boolean;
+  sortOrder?: number;
   createdAt: string;
+  _count?: { reviews: number; orderItems: number };
+  avgRating?: number | null;
 }
 
 type SortField = "name" | "category" | "price" | "quantity" | "createdAt";
 type SortDirection = "asc" | "desc";
-
-// ─── Mock Data ───────────────────────────────────────────
-const CATEGORIES = [
-  "All",
-  "Flower",
-  "Pre-Rolls",
-  "Edibles",
-  "Concentrates",
-  "Vaporizers",
-  "Tinctures",
-  "Topicals",
-  "Accessories",
-];
-
-const MOCK_PRODUCTS: Product[] = [
-  {
-    id: "p1",
-    name: "Blue Dream",
-    category: "Flower",
-    price: 42.0,
-    quantity: 85,
-    inStock: true,
-    thcContent: "21%",
-    cbdContent: "0.1%",
-    strain: "Hybrid",
-    sku: "FLW-BD-35",
-    createdAt: "2025-01-15",
-  },
-  {
-    id: "p2",
-    name: "Sour Diesel",
-    category: "Flower",
-    price: 75.0,
-    quantity: 42,
-    inStock: true,
-    thcContent: "26%",
-    cbdContent: "0.2%",
-    strain: "Sativa",
-    sku: "FLW-SD-70",
-    createdAt: "2025-01-18",
-  },
-  {
-    id: "p3",
-    name: "OG Kush Cartridge 1g",
-    category: "Vaporizers",
-    price: 45.0,
-    quantity: 120,
-    inStock: true,
-    thcContent: "89%",
-    strain: "Indica",
-    sku: "VAP-OGK-10",
-    createdAt: "2025-02-01",
-  },
-  {
-    id: "p4",
-    name: "Mango Kush Gummies 10mg",
-    category: "Edibles",
-    price: 28.0,
-    quantity: 200,
-    inStock: true,
-    thcContent: "10mg/pc",
-    sku: "EDI-MKG-10",
-    createdAt: "2025-02-05",
-  },
-  {
-    id: "p5",
-    name: "Wedding Cake",
-    category: "Flower",
-    price: 48.0,
-    quantity: 0,
-    inStock: false,
-    thcContent: "25%",
-    cbdContent: "0.1%",
-    strain: "Hybrid",
-    sku: "FLW-WC-35",
-    createdAt: "2025-01-20",
-  },
-  {
-    id: "p6",
-    name: "CBD Tincture 1000mg",
-    category: "Tinctures",
-    price: 55.0,
-    quantity: 65,
-    inStock: true,
-    cbdContent: "1000mg",
-    sku: "TIN-CBD-1000",
-    createdAt: "2025-02-10",
-  },
-  {
-    id: "p7",
-    name: "Jack Herer Pre-Roll 1g",
-    category: "Pre-Rolls",
-    price: 12.0,
-    quantity: 300,
-    inStock: true,
-    thcContent: "22%",
-    strain: "Sativa",
-    sku: "PRE-JH-10",
-    createdAt: "2025-02-08",
-  },
-  {
-    id: "p8",
-    name: "Live Resin Wax 1g",
-    category: "Concentrates",
-    price: 52.0,
-    quantity: 35,
-    inStock: true,
-    thcContent: "78%",
-    strain: "Indica",
-    sku: "CON-LRW-10",
-    createdAt: "2025-02-12",
-  },
-  {
-    id: "p9",
-    name: "Chocolate Edible Bar 100mg",
-    category: "Edibles",
-    price: 30.0,
-    quantity: 90,
-    inStock: true,
-    thcContent: "100mg total",
-    sku: "EDI-CHO-100",
-    createdAt: "2025-02-03",
-  },
-  {
-    id: "p10",
-    name: "Pain Relief Balm 500mg",
-    category: "Topicals",
-    price: 38.0,
-    quantity: 50,
-    inStock: true,
-    cbdContent: "500mg",
-    sku: "TOP-PRB-500",
-    createdAt: "2025-01-25",
-  },
-  {
-    id: "p11",
-    name: "Granddaddy Purple",
-    category: "Flower",
-    price: 42.0,
-    quantity: 15,
-    inStock: true,
-    thcContent: "23%",
-    cbdContent: "0.1%",
-    strain: "Indica",
-    sku: "FLW-GDP-35",
-    createdAt: "2025-02-14",
-  },
-  {
-    id: "p12",
-    name: "Glass Pipe Premium",
-    category: "Accessories",
-    price: 35.0,
-    quantity: 25,
-    inStock: true,
-    sku: "ACC-GPP-01",
-    createdAt: "2025-01-10",
-  },
-  {
-    id: "p13",
-    name: "Northern Lights 7g",
-    category: "Flower",
-    price: 72.0,
-    quantity: 28,
-    inStock: true,
-    thcContent: "24%",
-    strain: "Indica",
-    sku: "FLW-NL-70",
-    createdAt: "2025-02-16",
-  },
-  {
-    id: "p14",
-    name: "Pineapple Express Pre-Roll 5pk",
-    category: "Pre-Rolls",
-    price: 35.0,
-    quantity: 0,
-    inStock: false,
-    thcContent: "20%",
-    strain: "Hybrid",
-    sku: "PRE-PE-50",
-    createdAt: "2025-02-11",
-  },
-];
 
 const ITEMS_PER_PAGE = 8;
 
 // ─── Product Form Dialog ─────────────────────────────────
 interface ProductFormProps {
   product?: Product | null;
+  categories: Category[];
   onClose: () => void;
-  onSave: (product: Partial<Product>) => void;
+  onSave: (product: Product | null, data: Record<string, unknown>) => Promise<void>;
 }
 
-function ProductFormDialog({ product, onClose, onSave }: ProductFormProps) {
+function ProductFormDialog({ product, categories, onClose, onSave }: ProductFormProps) {
   const [form, setForm] = useState({
     name: product?.name || "",
-    category: product?.category || "Flower",
+    categoryId: product?.categoryId || (categories[0]?.id ?? ""),
     price: product?.price?.toString() || "",
     quantity: product?.quantity?.toString() || "0",
-    thcContent: product?.thcContent || "",
-    cbdContent: product?.cbdContent || "",
-    strain: product?.strain || "",
-    sku: product?.sku || "",
+    thcPercentage: product?.thcPercentage?.toString() || "",
+    cbdPercentage: product?.cbdPercentage?.toString() || "",
+    strainType: product?.strainType || "",
+    weight: product?.weight || "",
     inStock: product?.inStock ?? true,
   });
+  const [isSaving, setIsSaving] = useState(false);
+  const [imagePreview, setImagePreview] = useState<string | null>(product?.imageUrl || null);
+  const [imageUrl, setImageUrl] = useState<string>(product?.imageUrl || "");
+  const [isUploading, setIsUploading] = useState(false);
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleImageUpload = async (file: File) => {
+    if (!file.type.match(/^image\/(jpeg|jpg|png|webp)$/)) {
+      alert("Only JPEG, PNG, and WebP images are allowed.");
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      alert("Image must be under 5MB.");
+      return;
+    }
+    setIsUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      const res = await fetch("/api/upload", { method: "POST", body: formData });
+      if (!res.ok) throw new Error("Upload failed");
+      const data = await res.json();
+      setImageUrl(data.url);
+      setImagePreview(data.url);
+    } catch (err) {
+      console.error("Image upload error:", err);
+      alert("Failed to upload image. Please try again.");
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    onSave({
-      ...product,
-      name: form.name,
-      category: form.category,
-      price: parseFloat(form.price) || 0,
-      quantity: parseInt(form.quantity) || 0,
-      thcContent: form.thcContent || undefined,
-      cbdContent: form.cbdContent || undefined,
-      strain: form.strain || undefined,
-      sku: form.sku,
-      inStock: form.inStock,
-    });
-    onClose();
+    setIsSaving(true);
+    try {
+      const payload: Record<string, unknown> = {
+        name: form.name,
+        categoryId: form.categoryId,
+        price: parseFloat(form.price) || 0,
+        quantity: parseInt(form.quantity) || 0,
+        inStock: form.inStock,
+        thcPercentage: form.thcPercentage ? parseFloat(form.thcPercentage) : null,
+        cbdPercentage: form.cbdPercentage ? parseFloat(form.cbdPercentage) : null,
+        strainType: form.strainType || null,
+        weight: form.weight || null,
+        imageUrl: imageUrl || null,
+      };
+      await onSave(product ?? null, payload);
+      onClose();
+    } catch (err) {
+      console.error("Failed to save product:", err);
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   return (
@@ -290,14 +161,72 @@ function ProductFormDialog({ product, onClose, onSave }: ProductFormProps) {
 
         <form onSubmit={handleSubmit} className="space-y-4">
           {/* Image Upload Area */}
-          <div className="flex h-32 cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed border-emerald-900/30 bg-[#090F09] transition-colors hover:border-emerald-700/50">
-            <Upload className="mb-2 h-6 w-6 text-zinc-600" />
-            <span className="text-xs text-zinc-600">
-              Click to upload product image
-            </span>
-            <span className="mt-0.5 text-[10px] text-zinc-700">
-              PNG, JPG up to 5MB
-            </span>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/jpeg,image/jpg,image/png,image/webp"
+            className="hidden"
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              if (file) handleImageUpload(file);
+            }}
+          />
+          <div
+            onClick={() => !isUploading && fileInputRef.current?.click()}
+            onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); }}
+            onDrop={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              const file = e.dataTransfer.files?.[0];
+              if (file) handleImageUpload(file);
+            }}
+            className={cn(
+              "flex h-32 cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed transition-colors",
+              isUploading
+                ? "border-emerald-600/50 bg-emerald-950/20"
+                : imagePreview
+                ? "border-emerald-700/40 bg-[#090F09]"
+                : "border-emerald-900/30 bg-[#090F09] hover:border-emerald-700/50"
+            )}
+          >
+            {isUploading ? (
+              <>
+                <Loader2 className="mb-2 h-6 w-6 animate-spin text-emerald-400" />
+                <span className="text-xs text-emerald-400">Uploading...</span>
+              </>
+            ) : imagePreview ? (
+              <div className="relative flex h-full w-full items-center justify-center">
+                <Image
+                  src={imagePreview}
+                  alt="Product preview"
+                  width={112}
+                  height={112}
+                  className="h-28 w-auto rounded-lg object-contain"
+                  unoptimized
+                />
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setImagePreview(null);
+                    setImageUrl("");
+                  }}
+                  className="absolute right-2 top-2 rounded-full bg-black/60 p-1 text-zinc-400 hover:text-white"
+                >
+                  <X className="h-3.5 w-3.5" />
+                </button>
+              </div>
+            ) : (
+              <>
+                <Upload className="mb-2 h-6 w-6 text-zinc-600" />
+                <span className="text-xs text-zinc-600">
+                  Click or drag to upload product image
+                </span>
+                <span className="mt-0.5 text-[10px] text-zinc-700">
+                  PNG, JPG, WebP up to 5MB
+                </span>
+              </>
+            )}
           </div>
 
           <div className="grid grid-cols-2 gap-4">
@@ -318,13 +247,13 @@ function ProductFormDialog({ product, onClose, onSave }: ProductFormProps) {
                 Category
               </label>
               <select
-                value={form.category}
-                onChange={(e) => setForm({ ...form, category: e.target.value })}
+                value={form.categoryId}
+                onChange={(e) => setForm({ ...form, categoryId: e.target.value })}
                 className="flex h-10 w-full rounded-lg border border-emerald-900/50 bg-zinc-900/80 px-3 py-2 text-sm text-zinc-100 focus:border-emerald-600 focus:outline-none focus:ring-1 focus:ring-emerald-500/50"
               >
-                {CATEGORIES.filter((c) => c !== "All").map((cat) => (
-                  <option key={cat} value={cat}>
-                    {cat}
+                {categories.map((cat) => (
+                  <option key={cat.id} value={cat.id}>
+                    {cat.nameEn}
                   </option>
                 ))}
               </select>
@@ -332,13 +261,12 @@ function ProductFormDialog({ product, onClose, onSave }: ProductFormProps) {
 
             <div>
               <label className="mb-1 block text-sm font-medium text-zinc-400">
-                SKU
+                Weight
               </label>
               <Input
-                value={form.sku}
-                onChange={(e) => setForm({ ...form, sku: e.target.value })}
-                placeholder="FLW-BD-35"
-                required
+                value={form.weight}
+                onChange={(e) => setForm({ ...form, weight: e.target.value })}
+                placeholder="e.g. 3.5g"
               />
             </div>
 
@@ -372,27 +300,35 @@ function ProductFormDialog({ product, onClose, onSave }: ProductFormProps) {
 
             <div>
               <label className="mb-1 block text-sm font-medium text-zinc-400">
-                THC Content
+                THC %
               </label>
               <Input
-                value={form.thcContent}
+                type="number"
+                step="0.1"
+                min="0"
+                max="100"
+                value={form.thcPercentage}
                 onChange={(e) =>
-                  setForm({ ...form, thcContent: e.target.value })
+                  setForm({ ...form, thcPercentage: e.target.value })
                 }
-                placeholder="e.g. 21%"
+                placeholder="e.g. 21.0"
               />
             </div>
 
             <div>
               <label className="mb-1 block text-sm font-medium text-zinc-400">
-                CBD Content
+                CBD %
               </label>
               <Input
-                value={form.cbdContent}
+                type="number"
+                step="0.1"
+                min="0"
+                max="100"
+                value={form.cbdPercentage}
                 onChange={(e) =>
-                  setForm({ ...form, cbdContent: e.target.value })
+                  setForm({ ...form, cbdPercentage: e.target.value })
                 }
-                placeholder="e.g. 0.1%"
+                placeholder="e.g. 0.1"
               />
             </div>
 
@@ -401,14 +337,15 @@ function ProductFormDialog({ product, onClose, onSave }: ProductFormProps) {
                 Strain Type
               </label>
               <select
-                value={form.strain}
-                onChange={(e) => setForm({ ...form, strain: e.target.value })}
+                value={form.strainType}
+                onChange={(e) => setForm({ ...form, strainType: e.target.value })}
                 className="flex h-10 w-full rounded-lg border border-emerald-900/50 bg-zinc-900/80 px-3 py-2 text-sm text-zinc-100 focus:border-emerald-600 focus:outline-none focus:ring-1 focus:ring-emerald-500/50"
               >
                 <option value="">None</option>
-                <option value="Indica">Indica</option>
-                <option value="Sativa">Sativa</option>
-                <option value="Hybrid">Hybrid</option>
+                <option value="INDICA">Indica</option>
+                <option value="SATIVA">Sativa</option>
+                <option value="HYBRID">Hybrid</option>
+                <option value="CBD">CBD</option>
               </select>
             </div>
 
@@ -438,7 +375,8 @@ function ProductFormDialog({ product, onClose, onSave }: ProductFormProps) {
             <Button variant="outline" type="button" onClick={onClose}>
               Cancel
             </Button>
-            <Button type="submit">
+            <Button type="submit" disabled={isSaving}>
+              {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               {product ? "Save Changes" : "Add Product"}
             </Button>
           </div>
@@ -450,7 +388,9 @@ function ProductFormDialog({ product, onClose, onSave }: ProductFormProps) {
 
 // ─── Product Management Page ─────────────────────────────
 export default function ProductManagementPage() {
-  const [products, setProducts] = useState<Product[]>(MOCK_PRODUCTS);
+  const [products, setProducts] = useState<Product[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("All");
   const [sortField, setSortField] = useState<SortField>("name");
@@ -460,6 +400,39 @@ export default function ProductManagementPage() {
   const [showAddForm, setShowAddForm] = useState(false);
   const [editingQuantityId, setEditingQuantityId] = useState<string | null>(null);
   const [editingQuantityValue, setEditingQuantityValue] = useState("");
+
+  // ─── Fetch Products ────────────────────────────────────
+  const fetchProducts = useCallback(async () => {
+    try {
+      const res = await fetch("/api/products?limit=200");
+      if (!res.ok) throw new Error("Failed to fetch products");
+      const data = await res.json();
+      const fetchedProducts: Product[] = data.products ?? [];
+      setProducts(fetchedProducts);
+
+      // Extract unique categories from products
+      const catMap = new Map<string, Category>();
+      for (const p of fetchedProducts) {
+        if (p.category && !catMap.has(p.category.id)) {
+          catMap.set(p.category.id, p.category);
+        }
+      }
+      setCategories(Array.from(catMap.values()).sort((a, b) => a.nameEn.localeCompare(b.nameEn)));
+    } catch (err) {
+      console.error("Error fetching products:", err);
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchProducts();
+  }, [fetchProducts]);
+
+  // ─── Category filter labels (derived) ──────────────────
+  const categoryFilterOptions = useMemo(() => {
+    return ["All", ...categories.map((c) => c.nameEn)];
+  }, [categories]);
 
   // ─── Filtering & Sorting ────────────────────────────────
   const filteredProducts = useMemo(() => {
@@ -471,14 +444,15 @@ export default function ProductManagementPage() {
       result = result.filter(
         (p) =>
           p.name.toLowerCase().includes(q) ||
-          p.sku.toLowerCase().includes(q) ||
-          p.category.toLowerCase().includes(q)
+          p.category.nameEn.toLowerCase().includes(q) ||
+          (p.strainType && p.strainType.toLowerCase().includes(q)) ||
+          (p.weight && p.weight.toLowerCase().includes(q))
       );
     }
 
     // Category
     if (categoryFilter !== "All") {
-      result = result.filter((p) => p.category === categoryFilter);
+      result = result.filter((p) => p.category.nameEn === categoryFilter);
     }
 
     // Sort
@@ -489,7 +463,7 @@ export default function ProductManagementPage() {
           cmp = a.name.localeCompare(b.name);
           break;
         case "category":
-          cmp = a.category.localeCompare(b.category);
+          cmp = a.category.nameEn.localeCompare(b.category.nameEn);
           break;
         case "price":
           cmp = a.price - b.price;
@@ -525,58 +499,83 @@ export default function ProductManagementPage() {
     }
   };
 
-  const handleToggleStock = useCallback((productId: string) => {
-    setProducts((prev) =>
-      prev.map((p) => (p.id === productId ? { ...p, inStock: !p.inStock } : p))
-    );
-  }, []);
+  const handleToggleStock = useCallback(async (productId: string, currentInStock: boolean) => {
+    try {
+      const res = await fetch(`/api/products/${productId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ inStock: !currentInStock }),
+      });
+      if (!res.ok) throw new Error("Failed to toggle stock status");
+      await fetchProducts();
+    } catch (err) {
+      console.error("Error toggling stock:", err);
+    }
+  }, [fetchProducts]);
 
   const handleQuantitySave = useCallback(
-    (productId: string) => {
+    async (productId: string) => {
       const qty = parseInt(editingQuantityValue);
       if (!isNaN(qty) && qty >= 0) {
-        setProducts((prev) =>
-          prev.map((p) =>
-            p.id === productId ? { ...p, quantity: qty } : p
-          )
-        );
+        try {
+          const res = await fetch(`/api/products/${productId}`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ quantity: qty }),
+          });
+          if (!res.ok) throw new Error("Failed to update quantity");
+          await fetchProducts();
+        } catch (err) {
+          console.error("Error updating quantity:", err);
+        }
       }
       setEditingQuantityId(null);
     },
-    [editingQuantityValue]
+    [editingQuantityValue, fetchProducts]
   );
 
   const handleSaveProduct = useCallback(
-    (data: Partial<Product>) => {
-      if (data.id) {
-        // Edit existing
-        setProducts((prev) =>
-          prev.map((p) => (p.id === data.id ? { ...p, ...data } : p))
-        );
+    async (existingProduct: Product | null, data: Record<string, unknown>) => {
+      if (existingProduct) {
+        // Edit existing via PATCH
+        const res = await fetch(`/api/products/${existingProduct.id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(data),
+        });
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({}));
+          throw new Error(err.error || "Failed to update product");
+        }
       } else {
-        // Add new
-        const newProduct: Product = {
-          id: `p_${Date.now()}`,
-          name: data.name || "",
-          category: data.category || "Flower",
-          price: data.price || 0,
-          quantity: data.quantity || 0,
-          inStock: data.inStock ?? true,
-          thcContent: data.thcContent,
-          cbdContent: data.cbdContent,
-          strain: data.strain,
-          sku: data.sku || "",
-          createdAt: new Date().toISOString().split("T")[0],
-        };
-        setProducts((prev) => [newProduct, ...prev]);
+        // Create new via POST
+        const res = await fetch("/api/products", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(data),
+        });
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({}));
+          throw new Error(err.error || "Failed to create product");
+        }
       }
+      await fetchProducts();
     },
-    []
+    [fetchProducts]
   );
 
-  const handleDeleteProduct = useCallback((productId: string) => {
-    setProducts((prev) => prev.filter((p) => p.id !== productId));
-  }, []);
+  const handleDeleteProduct = useCallback(async (productId: string) => {
+    if (!confirm("Are you sure you want to delete this product?")) return;
+    try {
+      const res = await fetch(`/api/products/${productId}`, {
+        method: "DELETE",
+      });
+      if (!res.ok) throw new Error("Failed to delete product");
+      await fetchProducts();
+    } catch (err) {
+      console.error("Error deleting product:", err);
+    }
+  }, [fetchProducts]);
 
   const SortHeader = ({
     field,
@@ -598,6 +597,18 @@ export default function ProductManagementPage() {
       />
     </button>
   );
+
+  // ─── Loading State ─────────────────────────────────────
+  if (isLoading) {
+    return (
+      <div className="flex min-h-[400px] items-center justify-center">
+        <div className="flex flex-col items-center gap-3">
+          <Loader2 className="h-8 w-8 animate-spin text-emerald-400" />
+          <p className="text-sm text-zinc-500">Loading products...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div>
@@ -629,12 +640,12 @@ export default function ProductManagementPage() {
               setSearchQuery(e.target.value);
               setCurrentPage(1);
             }}
-            placeholder="Search products, SKUs..."
+            placeholder="Search products..."
             className="pl-10"
           />
         </div>
         <div className="flex gap-1 overflow-x-auto">
-          {CATEGORIES.map((cat) => (
+          {categoryFilterOptions.map((cat) => (
             <button
               key={cat}
               onClick={() => {
@@ -654,8 +665,158 @@ export default function ProductManagementPage() {
         </div>
       </div>
 
-      {/* ─── Product Table ───────────────────────────────── */}
-      <div className="overflow-hidden rounded-xl border border-emerald-900/30 bg-[#111A11]">
+      {/* ─── Mobile Product Cards (visible below sm breakpoint) ── */}
+      <div className="space-y-3 sm:hidden">
+        {paginatedProducts.map((product) => (
+          <div
+            key={product.id}
+            className="rounded-xl border border-emerald-900/30 bg-[#111A11] p-4"
+          >
+            {/* Product header */}
+            <div className="flex items-start gap-3">
+              <div className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-[#090F09]">
+                {product.imageUrl ? (
+                  <Image src={product.imageUrl} alt={product.name} width={48} height={48} className="h-12 w-12 object-cover" unoptimized />
+                ) : (
+                  <ImageIcon className="h-5 w-5 text-zinc-600" />
+                )}
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-zinc-200 truncate">
+                  {product.name}
+                </p>
+                <div className="mt-0.5 flex flex-wrap items-center gap-1.5 text-xs text-zinc-500">
+                  {product.weight && <span>{product.weight}</span>}
+                  {product.strainType && (
+                    <Badge variant="outline" className="px-1.5 py-0 text-[10px]">
+                      {product.strainType}
+                    </Badge>
+                  )}
+                  {product.thcPercentage != null && (
+                    <span>THC {product.thcPercentage}%</span>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Details grid */}
+            <div className="mt-3 grid grid-cols-3 gap-2">
+              <div className="rounded-lg bg-[#090F09] p-2 text-center">
+                <p className="text-xs text-zinc-500">Category</p>
+                <p className="mt-0.5 text-xs font-medium text-zinc-300 truncate">
+                  {product.category.nameEn}
+                </p>
+              </div>
+              <div className="rounded-lg bg-[#090F09] p-2 text-center">
+                <p className="text-xs text-zinc-500">Price</p>
+                <p className="mt-0.5 text-sm font-medium text-zinc-200">
+                  ${product.price.toFixed(2)}
+                </p>
+              </div>
+              <div className="rounded-lg bg-[#090F09] p-2 text-center">
+                <p className="text-xs text-zinc-500">Qty</p>
+                <button
+                  onClick={() => {
+                    setEditingQuantityId(product.id);
+                    setEditingQuantityValue(product.quantity.toString());
+                  }}
+                  className={cn(
+                    "mt-0.5 text-sm font-medium",
+                    product.quantity === 0
+                      ? "text-red-400"
+                      : product.quantity < 20
+                      ? "text-yellow-400"
+                      : "text-zinc-200"
+                  )}
+                >
+                  {product.quantity}
+                </button>
+              </div>
+            </div>
+
+            {/* Footer: status toggle + actions */}
+            <div className="mt-3 flex items-center justify-between border-t border-emerald-900/20 pt-3">
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => handleToggleStock(product.id, product.inStock)}
+                  className={cn(
+                    "relative h-6 w-11 rounded-full transition-colors",
+                    product.inStock ? "bg-emerald-600" : "bg-zinc-700"
+                  )}
+                  aria-label={product.inStock ? "In Stock - toggle off" : "Out of Stock - toggle on"}
+                >
+                  <span
+                    className={cn(
+                      "absolute left-0.5 top-0.5 h-5 w-5 rounded-full bg-white transition-transform",
+                      product.inStock && "translate-x-5"
+                    )}
+                  />
+                </button>
+                <span className={cn("text-xs font-medium", product.inStock ? "text-emerald-400" : "text-zinc-500")}>
+                  {product.inStock ? "In Stock" : "Out of Stock"}
+                </span>
+              </div>
+              <div className="flex items-center gap-1">
+                <button
+                  onClick={() => setEditingProduct(product)}
+                  className="rounded-lg p-2 text-zinc-500 transition-colors hover:bg-emerald-950/30 hover:text-emerald-400"
+                  aria-label={`Edit ${product.name}`}
+                >
+                  <Edit3 className="h-4 w-4" />
+                </button>
+                <button
+                  onClick={() => handleDeleteProduct(product.id)}
+                  className="rounded-lg p-2 text-zinc-500 transition-colors hover:bg-red-950/30 hover:text-red-400"
+                  aria-label={`Delete ${product.name}`}
+                >
+                  <Trash2 className="h-4 w-4" />
+                </button>
+              </div>
+            </div>
+          </div>
+        ))}
+
+        {paginatedProducts.length === 0 && (
+          <div className="rounded-xl border border-emerald-900/20 bg-[#111A11] py-12 text-center">
+            <p className="text-sm text-zinc-500">No products match your search.</p>
+          </div>
+        )}
+
+        {/* Mobile Pagination */}
+        {totalPages > 1 && (
+          <div className="flex items-center justify-between rounded-xl border border-emerald-900/30 bg-[#111A11] px-4 py-3">
+            <p className="text-xs text-zinc-500">
+              {(currentPage - 1) * ITEMS_PER_PAGE + 1}-
+              {Math.min(currentPage * ITEMS_PER_PAGE, filteredProducts.length)}{" "}
+              of {filteredProducts.length}
+            </p>
+            <div className="flex items-center gap-1">
+              <button
+                onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                disabled={currentPage === 1}
+                className="rounded-lg p-2 text-zinc-500 transition-colors hover:bg-emerald-950/30 hover:text-zinc-300 disabled:opacity-30"
+                aria-label="Previous page"
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </button>
+              <span className="px-2 text-xs font-medium text-zinc-400">
+                {currentPage} / {totalPages}
+              </span>
+              <button
+                onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                disabled={currentPage === totalPages}
+                className="rounded-lg p-2 text-zinc-500 transition-colors hover:bg-emerald-950/30 hover:text-zinc-300 disabled:opacity-30"
+                aria-label="Next page"
+              >
+                <ChevronRight className="h-4 w-4" />
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* ─── Product Table (visible at sm and above) ─────── */}
+      <div className="hidden overflow-hidden rounded-xl border border-emerald-900/30 bg-[#111A11] sm:block">
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead>
@@ -693,25 +854,31 @@ export default function ProductManagementPage() {
                   {/* Product */}
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-3">
-                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-[#090F09]">
-                        <ImageIcon className="h-4 w-4 text-zinc-600" />
+                      <div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-[#090F09]">
+                        {product.imageUrl ? (
+                          <Image src={product.imageUrl} alt={product.name} width={40} height={40} className="h-10 w-10 object-cover" unoptimized />
+                        ) : (
+                          <ImageIcon className="h-4 w-4 text-zinc-600" />
+                        )}
                       </div>
                       <div>
                         <p className="text-sm font-medium text-zinc-200">
                           {product.name}
                         </p>
                         <div className="flex items-center gap-2 text-xs text-zinc-500">
-                          <span>{product.sku}</span>
-                          {product.strain && (
+                          {product.weight && (
+                            <span>{product.weight}</span>
+                          )}
+                          {product.strainType && (
                             <Badge
                               variant="outline"
                               className="px-1.5 py-0 text-[10px]"
                             >
-                              {product.strain}
+                              {product.strainType}
                             </Badge>
                           )}
-                          {product.thcContent && (
-                            <span>THC {product.thcContent}</span>
+                          {product.thcPercentage != null && (
+                            <span>THC {product.thcPercentage}%</span>
                           )}
                         </div>
                       </div>
@@ -721,7 +888,7 @@ export default function ProductManagementPage() {
                   {/* Category */}
                   <td className="px-4 py-3">
                     <span className="text-sm text-zinc-400">
-                      {product.category}
+                      {product.category.nameEn}
                     </span>
                   </td>
 
@@ -784,7 +951,7 @@ export default function ProductManagementPage() {
                   {/* In Stock Toggle */}
                   <td className="px-4 py-3">
                     <button
-                      onClick={() => handleToggleStock(product.id)}
+                      onClick={() => handleToggleStock(product.id, product.inStock)}
                       className={cn(
                         "relative h-6 w-11 rounded-full transition-colors",
                         product.inStock ? "bg-emerald-600" : "bg-zinc-700"
@@ -886,6 +1053,7 @@ export default function ProductManagementPage() {
         {(showAddForm || editingProduct) && (
           <ProductFormDialog
             product={editingProduct}
+            categories={categories}
             onClose={() => {
               setShowAddForm(false);
               setEditingProduct(null);

@@ -230,11 +230,11 @@ export default function ProductsGrid({
                 <h4 className="mb-2 text-xs font-semibold uppercase tracking-wider text-zinc-400">
                   Category
                 </h4>
-                <div className="flex flex-wrap gap-2">
+                <div className="flex gap-2 overflow-x-auto no-scrollbar touch-scroll-x sm:flex-wrap sm:overflow-x-visible">
                   <button
                     onClick={() => setSelectedCategory("")}
                     className={cn(
-                      "rounded-full border px-3 py-1 text-xs font-medium transition-colors",
+                      "flex-shrink-0 rounded-full border px-4 py-2 text-xs font-medium transition-colors",
                       !selectedCategory
                         ? "border-emerald-500 bg-emerald-500/10 text-emerald-400"
                         : "border-zinc-700 text-zinc-400 hover:border-zinc-600"
@@ -251,7 +251,7 @@ export default function ProductsGrid({
                         )
                       }
                       className={cn(
-                        "rounded-full border px-3 py-1 text-xs font-medium transition-colors",
+                        "flex-shrink-0 whitespace-nowrap rounded-full border px-4 py-2 text-xs font-medium transition-colors",
                         selectedCategory === cat.slug
                           ? "border-emerald-500 bg-emerald-500/10 text-emerald-400"
                           : "border-zinc-700 text-zinc-400 hover:border-zinc-600"
@@ -273,7 +273,7 @@ export default function ProductsGrid({
                 <h4 className="mb-2 text-xs font-semibold uppercase tracking-wider text-zinc-400">
                   Strain Type
                 </h4>
-                <div className="flex flex-wrap gap-2">
+                <div className="flex gap-2 overflow-x-auto no-scrollbar touch-scroll-x sm:flex-wrap sm:overflow-x-visible">
                   {strainTypes.map((strain) => (
                     <button
                       key={strain}
@@ -283,7 +283,7 @@ export default function ProductsGrid({
                         )
                       }
                       className={cn(
-                        "rounded-full border px-3 py-1 text-xs font-medium transition-colors",
+                        "flex-shrink-0 rounded-full border px-4 py-2 text-xs font-medium transition-colors",
                         selectedStrain === strain
                           ? "border-emerald-500 bg-emerald-500/10 text-emerald-400"
                           : "border-zinc-700 text-zinc-400 hover:border-zinc-600"
@@ -300,7 +300,7 @@ export default function ProductsGrid({
                 <h4 className="mb-2 text-xs font-semibold uppercase tracking-wider text-zinc-400">
                   Price Range
                 </h4>
-                <div className="flex flex-wrap gap-2">
+                <div className="flex gap-2 overflow-x-auto no-scrollbar touch-scroll-x sm:flex-wrap sm:overflow-x-visible">
                   {priceRanges.map((range, i) => (
                     <button
                       key={i}
@@ -310,7 +310,7 @@ export default function ProductsGrid({
                         )
                       }
                       className={cn(
-                        "rounded-full border px-3 py-1 text-xs font-medium transition-colors",
+                        "flex-shrink-0 whitespace-nowrap rounded-full border px-4 py-2 text-xs font-medium transition-colors",
                         selectedPriceRange === i
                           ? "border-emerald-500 bg-emerald-500/10 text-emerald-400"
                           : "border-zinc-700 text-zinc-400 hover:border-zinc-600"

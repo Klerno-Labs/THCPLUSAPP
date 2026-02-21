@@ -209,4 +209,20 @@
     -ms-overflow-style: none;
     scrollbar-width: none;
   }
+
+  /* Touch-optimized horizontal scroll */
+  .touch-scroll-x {
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-x: contain;
+    scroll-snap-type: x proximity;
+  }
+
+  .touch-scroll-x > * {
+    scroll-snap-align: start;
+  }
+
+  /* Safe area padding for fixed bottom bars */
+  .pb-safe {
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
 }

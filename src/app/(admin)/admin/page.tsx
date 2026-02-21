@@ -52,7 +52,10 @@ function transformOrder(apiOrder: any): OrderData {
       };
     }),
     totalItems: apiOrder.totalItems,
-    totalPrice: 0,
+    totalPrice: (apiOrder.items || []).reduce(
+      (sum: number, item: any) => sum + Number(item.unitPriceAtOrder || 0) * item.quantity,
+      0
+    ),
     aiPriorityScore: apiOrder.aiPriorityScore ?? 5,
     aiFlags: apiOrder.aiFlags || [],
     aiReason: apiOrder.aiReason || "",

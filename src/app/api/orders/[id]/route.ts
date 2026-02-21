@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { updateOrderStatusSchema } from "@/lib/validations";
 import { getPusherServer, CHANNELS, EVENTS } from "@/lib/pusher";
@@ -57,6 +58,14 @@ export async function PATCH(
   { params }: RouteContext
 ) {
   try {
+    const session = await auth();
+    if (
+      !session?.user ||
+      !["OWNER", "MANAGER", "STAFF"].includes((session.user as any).role)
+    ) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
     const { id } = params;
     const body = await request.json();
     const parsed = updateOrderStatusSchema.safeParse(body);
@@ -141,6 +150,27 @@ export async function PATCH(
         },
       });
 
+      // ── Award loyalty points on pickup ──
+      if (status === "PICKED_UP" && order.customerId) {
+        const itemCount = order.items.reduce((sum, i) => sum + i.quantity, 0);
+        const pointsEarned = Math.max(1, itemCount); // 1 point per item, minimum 1
+
+        await tx.profile.update({
+          where: { id: order.customerId },
+          data: { loyaltyPoints: { increment: pointsEarned } },
+        });
+
+        await tx.loyaltyTransaction.create({
+          data: {
+            customerId: order.customerId,
+            points: pointsEarned,
+            type: "EARNED",
+            description: `Earned ${pointsEarned} point${pointsEarned > 1 ? "s" : ""} for order #${order.orderNumber}`,
+            orderId: order.id,
+          },
+        });
+      }
+
       return order;
     });
 
@@ -151,6 +181,8 @@ export async function PATCH(
       updatedOrder.customer?.preferredLanguage || "en";
 
     // ── Send SMS based on status ──
+    console.log(`[Order ${updatedOrder.orderNumber}] Status → ${status} | Phone: ${customerPhone || "none"} | Lang: ${language}`);
+
     if (customerPhone) {
       let smsBody: string | null = null;
 
@@ -173,12 +205,18 @@ export async function PATCH(
       }
 
       if (smsBody) {
-        await sendSms({ to: customerPhone, body: smsBody }).catch(
+        const smsResult = await sendSms({ to: customerPhone, body: smsBody }).catch(
           (err) => {
             console.error("SMS send failed:", err);
+            return { success: false, error: err };
           }
         );
+        console.log(`[Order ${updatedOrder.orderNumber}] SMS result:`, JSON.stringify(smsResult));
+      } else {
+        console.log(`[Order ${updatedOrder.orderNumber}] No SMS for status "${status}"`);
       }
+    } else {
+      console.log(`[Order ${updatedOrder.orderNumber}] No phone — skipping SMS`);
     }
 
     // ── Trigger Pusher events (graceful when not configured) ──

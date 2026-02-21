@@ -72,10 +72,10 @@ export default function CategoryGrid({ categories }: CategoryGridProps) {
                 key={category.id}
                 href={`/products?category=${category.slug}`}
                 className={cn(
-                  "group flex flex-col items-center gap-3 rounded-xl border border-emerald-900/30 p-5 transition-all duration-200",
+                  "group flex flex-col items-center gap-3 rounded-xl border border-emerald-900/30 p-5 min-h-[6rem] transition-all duration-200",
                   "bg-gradient-to-br",
                   gradients[i % gradients.length],
-                  "hover:border-emerald-700/40 hover:shadow-glow"
+                  "hover:border-emerald-700/40 hover:shadow-glow active:scale-[0.97]"
                 )}
               >
                 <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-[#111A11] text-emerald-400 transition-colors group-hover:bg-emerald-900/40 group-hover:text-emerald-300">

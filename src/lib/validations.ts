@@ -27,7 +27,7 @@ export const productSchema = z.object({
   categoryId: z.string().min(1, "Category is required"),
   descriptionEn: z.string().max(2000).optional(),
   descriptionEs: z.string().max(2000).optional(),
-  price: z.number().positive("Price must be positive"),
+  price: z.number().min(0, "Price cannot be negative"),
   thcPercentage: z.number().min(0).max(100).optional(),
   cbdPercentage: z.number().min(0).max(100).optional(),
   strainType: z.enum(["SATIVA", "INDICA", "HYBRID", "CBD"]).optional(),
@@ -60,7 +60,10 @@ export const createOrderSchema = z.object({
   guestName: z.string().min(2).max(100).optional(),
   guestPhone: z.string().regex(/^\+?[1-9]\d{9,14}$/).optional(),
   guestSessionId: z.string().optional(),
-});
+}).refine(
+  (data) => data.customerId || (data.guestName && data.guestPhone),
+  { message: "Either customerId or guestName+guestPhone is required" }
+);
 
 export const updateOrderStatusSchema = z.object({
   status: z.enum([

@@ -32,7 +32,7 @@ import FadeIn from "@/components/customer/FadeIn";
 interface OrderItem {
   id: string;
   quantity: number;
-  unitPrice: number;
+  unitPriceAtOrder: number;
   product: {
     id: string;
     name: string;
@@ -110,13 +110,18 @@ export default function OrderTrackingPage() {
         return;
       }
       const data = await res.json();
+      const items = (data.items || []).map((item: any) => ({
+        ...item,
+        unitPriceAtOrder: Number(item.unitPriceAtOrderAtOrder || 0),
+      }));
+      const totalAmount = items.reduce(
+        (sum: number, item: any) => sum + item.unitPriceAtOrderAtOrder * item.quantity,
+        0
+      );
       setOrder({
         ...data,
-        totalAmount: Number(data.totalAmount),
-        items: data.items.map((item: any) => ({
-          ...item,
-          unitPrice: Number(item.unitPrice),
-        })),
+        totalAmount,
+        items,
       });
     } catch {
       setOrder(null);
@@ -143,7 +148,7 @@ export default function OrderTrackingPage() {
     if (!order) return;
     setIsCancelling(true);
     try {
-      const res = await fetch(`/api/orders/${orderId}/status`, {
+      const res = await fetch(`/api/orders/${orderId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ status: "CANCELLED" }),
@@ -231,7 +236,7 @@ export default function OrderTrackingPage() {
               </h1>
               <button
                 onClick={handleCopyOrderNumber}
-                className="flex h-8 w-8 items-center justify-center rounded-lg border border-emerald-800/30 text-zinc-400 transition-colors hover:text-white"
+                className="flex h-10 w-10 items-center justify-center rounded-lg border border-emerald-800/30 text-zinc-400 transition-colors hover:text-white"
               >
                 {copied ? (
                   <Check className="h-4 w-4 text-emerald-400" />
@@ -356,10 +361,10 @@ export default function OrderTrackingPage() {
                       </div>
 
                       {/* Text */}
-                      <div className="pb-8">
+                      <div className="pb-8 pt-1.5 sm:pt-0">
                         <h3
                           className={cn(
-                            "text-sm font-semibold",
+                            "text-sm sm:text-sm font-semibold",
                             isCompleted || isCurrent
                               ? "text-white"
                               : "text-zinc-500"
@@ -441,12 +446,12 @@ export default function OrderTrackingPage() {
                         {item.product.name}
                       </p>
                       <p className="text-xs text-zinc-500">
-                        Qty: {item.quantity} x {formatPrice(item.unitPrice)}
+                        Qty: {item.quantity} x {formatPrice(item.unitPriceAtOrder)}
                       </p>
                     </div>
                   </div>
                   <span className="text-sm font-semibold text-zinc-300">
-                    {formatPrice(item.unitPrice * item.quantity)}
+                    {formatPrice(item.unitPriceAtOrder * item.quantity)}
                   </span>
                 </div>
               ))}
@@ -468,7 +473,7 @@ export default function OrderTrackingPage() {
                 variant="destructive"
                 onClick={handleCancelOrder}
                 disabled={isCancelling}
-                className="gap-2"
+                className="gap-2 h-12 px-6"
               >
                 {isCancelling ? (
                   <>

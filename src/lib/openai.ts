@@ -1,7 +1,11 @@
 import OpenAI from "openai";
 
+if (!process.env.OPENAI_API_KEY) {
+  console.warn("[OpenAI] OPENAI_API_KEY is not set — AI features will not work");
+}
+
 export const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY || "sk-placeholder",
+  apiKey: process.env.OPENAI_API_KEY || "sk-not-configured",
 });
 
 export const BUDTENDER_SYSTEM_PROMPT = `You are the THC Plus AI Budtender — a friendly, knowledgeable cannabis expert helping customers at THC Plus in Houston, TX.

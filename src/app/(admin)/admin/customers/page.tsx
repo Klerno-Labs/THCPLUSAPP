@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useCallback, useMemo } from "react";
+import React, { useState, useCallback, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Users,
@@ -15,6 +15,8 @@ import {
   ChevronUp,
   Award,
   X,
+  Loader2,
+  AlertCircle,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -41,118 +43,10 @@ interface Customer {
   totalOrders: number;
   totalSpent: number;
   joinedAt: string;
-  lastOrderAt: string;
+  lastOrderAt: string | null;
   staffNotes: string;
   orders: CustomerOrder[];
 }
-
-// ─── Mock Data ───────────────────────────────────────────
-const MOCK_CUSTOMERS: Customer[] = [
-  {
-    id: "c1",
-    name: "Sarah Martinez",
-    phone: "(555) 123-4567",
-    email: "sarah.m@email.com",
-    loyaltyTier: "MASTER_GROWER",
-    loyaltyPoints: 842,
-    totalOrders: 67,
-    totalSpent: 4280.0,
-    joinedAt: "2024-03-15",
-    lastOrderAt: "2025-02-19",
-    staffNotes: "VIP customer. Prefers indica strains. Birthday: March 15.",
-    orders: [
-      { id: "o1", orderNumber: "THC-A1B2", date: "2025-02-19", total: 143.0, itemCount: 4, status: "PENDING" },
-      { id: "o2", orderNumber: "THC-X9Y8", date: "2025-02-15", total: 85.0, itemCount: 2, status: "PICKED_UP" },
-      { id: "o3", orderNumber: "THC-W7V6", date: "2025-02-10", total: 120.0, itemCount: 3, status: "PICKED_UP" },
-      { id: "o4", orderNumber: "THC-U5T4", date: "2025-02-03", total: 55.0, itemCount: 1, status: "PICKED_UP" },
-    ],
-  },
-  {
-    id: "c2",
-    name: "James Wilson",
-    phone: "(555) 234-5678",
-    email: "jwilson@email.com",
-    loyaltyTier: "SEEDLING",
-    loyaltyPoints: 12,
-    totalOrders: 1,
-    totalSpent: 97.0,
-    joinedAt: "2025-02-18",
-    lastOrderAt: "2025-02-18",
-    staffNotes: "",
-    orders: [
-      { id: "o5", orderNumber: "THC-C3D4", date: "2025-02-18", total: 97.0, itemCount: 2, status: "PENDING" },
-    ],
-  },
-  {
-    id: "c3",
-    name: "Maria Rodriguez",
-    phone: "(555) 345-6789",
-    email: "maria.r@email.com",
-    loyaltyTier: "CULTIVATOR",
-    loyaltyPoints: 256,
-    totalOrders: 34,
-    totalSpent: 2150.0,
-    joinedAt: "2024-06-22",
-    lastOrderAt: "2025-02-19",
-    staffNotes: "Prefers sativa. Speaks Spanish — offer bilingual service.",
-    orders: [
-      { id: "o6", orderNumber: "THC-E5F6", date: "2025-02-19", total: 85.0, itemCount: 3, status: "CONFIRMED" },
-      { id: "o7", orderNumber: "THC-S3R2", date: "2025-02-14", total: 62.0, itemCount: 2, status: "PICKED_UP" },
-      { id: "o8", orderNumber: "THC-Q1P0", date: "2025-02-07", total: 105.0, itemCount: 3, status: "PICKED_UP" },
-    ],
-  },
-  {
-    id: "c4",
-    name: "David Chen",
-    phone: "(555) 456-7890",
-    email: "d.chen@email.com",
-    loyaltyTier: "GROWER",
-    loyaltyPoints: 78,
-    totalOrders: 12,
-    totalSpent: 780.0,
-    joinedAt: "2024-09-10",
-    lastOrderAt: "2025-02-19",
-    staffNotes: "Enjoys edibles and concentrates.",
-    orders: [
-      { id: "o9", orderNumber: "THC-G7H8", date: "2025-02-19", total: 161.0, itemCount: 4, status: "PREPARING" },
-      { id: "o10", orderNumber: "THC-O9N8", date: "2025-02-12", total: 48.0, itemCount: 1, status: "PICKED_UP" },
-    ],
-  },
-  {
-    id: "c5",
-    name: "Ashley Thompson",
-    phone: "(555) 567-8901",
-    email: "ashley.t@email.com",
-    loyaltyTier: "GROWER",
-    loyaltyPoints: 45,
-    totalOrders: 8,
-    totalSpent: 320.0,
-    joinedAt: "2024-11-01",
-    lastOrderAt: "2025-02-19",
-    staffNotes: "",
-    orders: [
-      { id: "o11", orderNumber: "THC-I9J0", date: "2025-02-19", total: 36.0, itemCount: 3, status: "READY" },
-      { id: "o12", orderNumber: "THC-M7L6", date: "2025-02-11", total: 42.0, itemCount: 1, status: "PICKED_UP" },
-    ],
-  },
-  {
-    id: "c6",
-    name: "Kevin Brown",
-    phone: "(555) 678-9012",
-    loyaltyTier: "CULTIVATOR",
-    loyaltyPoints: 190,
-    totalOrders: 28,
-    totalSpent: 1890.0,
-    joinedAt: "2024-05-18",
-    lastOrderAt: "2025-02-19",
-    staffNotes: "Bulk buyer, always orders 7g+. Ask about loyalty rewards.",
-    orders: [
-      { id: "o13", orderNumber: "THC-K1L2", date: "2025-02-19", total: 156.0, itemCount: 4, status: "PENDING" },
-      { id: "o14", orderNumber: "THC-K5J4", date: "2025-02-16", total: 148.0, itemCount: 3, status: "PICKED_UP" },
-      { id: "o15", orderNumber: "THC-I3H2", date: "2025-02-09", total: 72.0, itemCount: 1, status: "PICKED_UP" },
-    ],
-  },
-];
 
 // ─── Tier Config ─────────────────────────────────────────
 const TIER_CONFIG: Record<
@@ -189,7 +83,7 @@ const TIER_CONFIG: Record<
 interface PointsModalProps {
   customer: Customer;
   onClose: () => void;
-  onAdjust: (customerId: string, amount: number, reason: string) => void;
+  onAdjust: (customerId: string, amount: number, reason: string) => Promise<void>;
 }
 
 function PointsAdjustmentModal({
@@ -200,13 +94,21 @@ function PointsAdjustmentModal({
   const [amount, setAmount] = useState("");
   const [reason, setReason] = useState("");
   const [isAdding, setIsAdding] = useState(true);
+  const [saving, setSaving] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const pts = parseInt(amount);
     if (isNaN(pts) || pts <= 0 || !reason.trim()) return;
-    onAdjust(customer.id, isAdding ? pts : -pts, reason);
-    onClose();
+    setSaving(true);
+    try {
+      await onAdjust(customer.id, isAdding ? pts : -pts, reason);
+      onClose();
+    } catch {
+      // Error is handled by the parent; keep modal open so user can retry
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -279,6 +181,7 @@ function PointsAdjustmentModal({
               onChange={(e) => setAmount(e.target.value)}
               placeholder="Enter points amount"
               required
+              disabled={saving}
             />
           </div>
 
@@ -291,21 +194,26 @@ function PointsAdjustmentModal({
               onChange={(e) => setReason(e.target.value)}
               placeholder="e.g. Birthday bonus, Customer complaint resolution"
               required
+              disabled={saving}
             />
           </div>
 
           <div className="flex justify-end gap-3">
-            <Button variant="outline" type="button" onClick={onClose}>
+            <Button variant="outline" type="button" onClick={onClose} disabled={saving}>
               Cancel
             </Button>
             <Button
               type="submit"
+              disabled={saving}
               className={
                 isAdding
                   ? "bg-emerald-600 hover:bg-emerald-700"
                   : "bg-red-600 hover:bg-red-700"
               }
             >
+              {saving ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : null}
               {isAdding ? "Add" : "Remove"} Points
             </Button>
           </div>
@@ -318,7 +226,7 @@ function PointsAdjustmentModal({
 // ─── Customer Card ───────────────────────────────────────
 interface CustomerCardProps {
   customer: Customer;
-  onNotesUpdate: (customerId: string, notes: string) => void;
+  onNotesUpdate: (customerId: string, notes: string) => Promise<void>;
   onPointsAdjust: (customer: Customer) => void;
 }
 
@@ -329,7 +237,33 @@ function CustomerCard({
 }: CustomerCardProps) {
   const [expanded, setExpanded] = useState(false);
   const [notes, setNotes] = useState(customer.staffNotes);
+  const [savingNotes, setSavingNotes] = useState(false);
+  const [notesSaved, setNotesSaved] = useState(false);
   const tierConfig = TIER_CONFIG[customer.loyaltyTier];
+
+  // Keep local notes in sync when customer data is refetched
+  const prevNotesRef = useRef(customer.staffNotes);
+  useEffect(() => {
+    if (prevNotesRef.current !== customer.staffNotes) {
+      setNotes(customer.staffNotes);
+      prevNotesRef.current = customer.staffNotes;
+    }
+  }, [customer.staffNotes]);
+
+  const handleSaveNotes = async () => {
+    if (notes === customer.staffNotes) return;
+    setSavingNotes(true);
+    try {
+      await onNotesUpdate(customer.id, notes);
+      setNotesSaved(true);
+      setTimeout(() => setNotesSaved(false), 2000);
+    } catch {
+      // Revert on failure
+      setNotes(customer.staffNotes);
+    } finally {
+      setSavingNotes(false);
+    }
+  };
 
   return (
     <motion.div
@@ -432,11 +366,26 @@ function CustomerCard({
           <textarea
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
-            onBlur={() => onNotesUpdate(customer.id, notes)}
             placeholder="Add notes about this customer..."
             rows={2}
             className="w-full rounded-lg border border-emerald-900/30 bg-[#090F09] px-3 py-2 text-sm text-zinc-200 placeholder:text-zinc-600 focus:border-emerald-600 focus:outline-none focus:ring-1 focus:ring-emerald-500/50"
           />
+          {notes !== customer.staffNotes && (
+            <Button
+              size="sm"
+              className="mt-1.5 bg-emerald-600 hover:bg-emerald-700"
+              onClick={handleSaveNotes}
+              disabled={savingNotes}
+            >
+              {savingNotes ? (
+                <Loader2 className="mr-2 h-3 w-3 animate-spin" />
+              ) : null}
+              Save Notes
+            </Button>
+          )}
+          {notesSaved && (
+            <p className="mt-1 text-xs text-emerald-400">Notes saved.</p>
+          )}
         </div>
       </div>
 
@@ -519,44 +468,104 @@ function CustomerCard({
 
 // ─── Customer Lookup Page ────────────────────────────────
 export default function CustomerLookupPage() {
-  const [customers, setCustomers] = useState<Customer[]>(MOCK_CUSTOMERS);
+  const [customers, setCustomers] = useState<Customer[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [pointsModalCustomer, setPointsModalCustomer] =
     useState<Customer | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [mutating, setMutating] = useState(false);
 
-  const filteredCustomers = useMemo(() => {
-    if (!searchQuery) return customers;
-    const q = searchQuery.toLowerCase();
-    return customers.filter(
-      (c) =>
-        c.name.toLowerCase().includes(q) ||
-        c.phone.includes(q) ||
-        c.email?.toLowerCase().includes(q)
-    );
-  }, [customers, searchQuery]);
+  // Debounce search to avoid excessive API calls
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(searchQuery);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
 
+  // Fetch customers from the API
+  const fetchCustomers = useCallback(async (search?: string) => {
+    setLoading(true);
+    setError(null);
+    try {
+      const url = search
+        ? `/api/customers?search=${encodeURIComponent(search)}`
+        : "/api/customers";
+      const res = await fetch(url);
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body.error || `Failed to fetch customers (${res.status})`);
+      }
+      const data: Customer[] = await res.json();
+      setCustomers(data);
+    } catch (err: any) {
+      setError(err.message || "Failed to load customers");
+      console.error("fetchCustomers error:", err);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  // Initial fetch + refetch on search change
+  useEffect(() => {
+    fetchCustomers(debouncedSearch || undefined);
+  }, [debouncedSearch, fetchCustomers]);
+
+  // Save staff notes via PATCH
   const handleNotesUpdate = useCallback(
-    (customerId: string, notes: string) => {
-      setCustomers((prev) =>
-        prev.map((c) =>
-          c.id === customerId ? { ...c, staffNotes: notes } : c
-        )
-      );
+    async (customerId: string, notes: string) => {
+      setMutating(true);
+      try {
+        const res = await fetch(`/api/customers/${customerId}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ staffNotes: notes }),
+        });
+        if (!res.ok) {
+          const body = await res.json().catch(() => ({}));
+          throw new Error(body.error || "Failed to save notes");
+        }
+        // Refetch to get fresh data
+        await fetchCustomers(debouncedSearch || undefined);
+      } catch (err: any) {
+        console.error("handleNotesUpdate error:", err);
+        throw err; // Re-throw so the card can revert
+      } finally {
+        setMutating(false);
+      }
     },
-    []
+    [fetchCustomers, debouncedSearch]
   );
 
+  // Adjust loyalty points via PATCH
   const handlePointsAdjust = useCallback(
-    (customerId: string, amount: number, _reason: string) => {
-      setCustomers((prev) =>
-        prev.map((c) =>
-          c.id === customerId
-            ? { ...c, loyaltyPoints: Math.max(0, c.loyaltyPoints + amount) }
-            : c
-        )
-      );
+    async (customerId: string, amount: number, reason: string) => {
+      setMutating(true);
+      try {
+        const res = await fetch(`/api/customers/${customerId}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            loyaltyAdjustment: amount,
+            loyaltyReason: reason,
+          }),
+        });
+        if (!res.ok) {
+          const body = await res.json().catch(() => ({}));
+          throw new Error(body.error || "Failed to adjust points");
+        }
+        // Refetch to get fresh data
+        await fetchCustomers(debouncedSearch || undefined);
+      } catch (err: any) {
+        console.error("handlePointsAdjust error:", err);
+        throw err; // Re-throw so the modal can stay open for retry
+      } finally {
+        setMutating(false);
+      }
     },
-    []
+    [fetchCustomers, debouncedSearch]
   );
 
   return (
@@ -568,7 +577,10 @@ export default function CustomerLookupPage() {
           Customer Lookup
         </h1>
         <p className="mt-1 text-sm text-zinc-500">
-          {customers.length} customers &middot; Search by name, phone, or email
+          {loading
+            ? "Loading customers..."
+            : `${customers.length} customer${customers.length !== 1 ? "s" : ""}`}{" "}
+          &middot; Search by name, phone, or email
         </p>
       </div>
 
@@ -581,12 +593,41 @@ export default function CustomerLookupPage() {
           placeholder="Search by name, phone number, or email..."
           className="pl-10 text-base"
         />
+        {(loading || mutating) && (
+          <Loader2 className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 animate-spin text-emerald-500" />
+        )}
       </div>
 
-      {/* ─── Customer Grid ───────────────────────────────── */}
-      {filteredCustomers.length > 0 ? (
+      {/* ─── Error State ─────────────────────────────────── */}
+      {error && (
+        <div className="mb-6 flex items-center gap-3 rounded-xl border border-red-900/30 bg-red-950/20 p-4">
+          <AlertCircle className="h-5 w-5 flex-shrink-0 text-red-400" />
+          <div className="flex-1">
+            <p className="text-sm font-medium text-red-300">{error}</p>
+          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => fetchCustomers(debouncedSearch || undefined)}
+            className="border-red-900/40 text-red-300 hover:bg-red-950/30"
+          >
+            Retry
+          </Button>
+        </div>
+      )}
+
+      {/* ─── Loading State ───────────────────────────────── */}
+      {loading && customers.length === 0 ? (
+        <div className="flex flex-col items-center justify-center rounded-2xl border border-emerald-900/20 bg-[#111A11] py-16">
+          <Loader2 className="mb-3 h-10 w-10 animate-spin text-emerald-500" />
+          <h3 className="text-lg font-semibold text-zinc-400">
+            Loading customers...
+          </h3>
+        </div>
+      ) : customers.length > 0 ? (
+        /* ─── Customer Grid ───────────────────────────────── */
         <div className="grid gap-4 lg:grid-cols-2">
-          {filteredCustomers.map((customer) => (
+          {customers.map((customer) => (
             <CustomerCard
               key={customer.id}
               customer={customer}
@@ -595,17 +636,19 @@ export default function CustomerLookupPage() {
             />
           ))}
         </div>
-      ) : (
+      ) : !loading ? (
         <div className="flex flex-col items-center justify-center rounded-2xl border border-emerald-900/20 bg-[#111A11] py-16">
           <Users className="mb-3 h-10 w-10 text-zinc-700" />
           <h3 className="text-lg font-semibold text-zinc-400">
             No customers found
           </h3>
           <p className="mt-1 text-sm text-zinc-600">
-            Try a different search term.
+            {searchQuery
+              ? "Try a different search term."
+              : "No customer records yet."}
           </p>
         </div>
-      )}
+      ) : null}
 
       {/* ─── Points Modal ────────────────────────────────── */}
       <AnimatePresence>

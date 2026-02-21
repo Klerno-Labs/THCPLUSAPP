@@ -505,10 +505,18 @@ export async function GET(request: NextRequest) {
 
     // ── Upload to Vercel Blob ──
     const filename = `exports/analytics-report-${new Date().toISOString().split("T")[0]}-${Date.now()}.pdf`;
-    const blob = await put(filename, pdfBuffer, {
-      access: "public",
-      contentType: "application/pdf",
-    });
+    let blob;
+    try {
+      blob = await put(filename, pdfBuffer, {
+        access: "public",
+        contentType: "application/pdf",
+      });
+    } catch {
+      blob = await put(filename, pdfBuffer, {
+        access: "private",
+        contentType: "application/pdf",
+      });
+    }
 
     return NextResponse.json({
       url: blob.url,

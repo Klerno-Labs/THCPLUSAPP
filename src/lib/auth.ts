@@ -96,11 +96,16 @@ export const {
       return session;
     },
     async authorized({ auth, request }) {
-      const isAdmin = request.nextUrl.pathname.startsWith("/admin");
+      const pathname = request.nextUrl.pathname;
+      const isLoginPage = pathname === "/admin/login";
+      const isAdmin = pathname.startsWith("/admin");
       const isLoggedIn = !!auth?.user;
       const isStaff = ["OWNER", "MANAGER", "STAFF"].includes(
         (auth?.user as any)?.role
       );
+
+      // Always allow access to the login page
+      if (isLoginPage) return true;
 
       if (isAdmin) {
         if (!isLoggedIn || !isStaff) return false;

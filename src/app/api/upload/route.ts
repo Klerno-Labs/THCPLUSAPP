@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { put } from "@vercel/blob";
+import { auth } from "@/lib/auth";
+import { put, type PutBlobResult } from "@vercel/blob";
 
 const ALLOWED_TYPES = [
   "image/jpeg",
@@ -13,6 +14,14 @@ const MAX_SIZE = 5 * 1024 * 1024; // 5MB
 // ─── POST: Upload File to Vercel Blob ───────────────────
 export async function POST(request: NextRequest) {
   try {
+    const session = await auth();
+    if (
+      !session?.user ||
+      !["OWNER", "MANAGER", "STAFF"].includes((session.user as any).role)
+    ) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
     const formData = await request.formData();
     const file = formData.get("file") as File | null;
 
@@ -55,10 +64,19 @@ export async function POST(request: NextRequest) {
     const filename = `uploads/${timestamp}-${safeName}`;
 
     // ── Upload to Vercel Blob ──
-    const blob = await put(filename, file, {
-      access: "public",
-      contentType: file.type,
-    });
+    let blob: PutBlobResult;
+    try {
+      blob = await put(filename, file, {
+        access: "public",
+        contentType: file.type,
+      });
+    } catch {
+      // Fallback to private if store doesn't support public access
+      blob = await put(filename, file, {
+        access: "private",
+        contentType: file.type,
+      });
+    }
 
     return NextResponse.json(
       {

@@ -3,12 +3,13 @@
 import Image from "next/image";
 import Link from "next/link";
 import { motion } from "framer-motion";
-import { Star, ShoppingCart, AlertCircle } from "lucide-react";
+import { Star, ShoppingCart, AlertCircle, Heart } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { formatPrice } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useCartContext } from "@/context/CartContext";
+import { useFavorites } from "@/context/FavoritesContext";
 import { useToast } from "@/components/ui/use-toast";
 
 interface ProductCardProduct {
@@ -44,7 +45,15 @@ const strainColors: Record<string, string> = {
 
 export default function ProductCard({ product, index = 0 }: ProductCardProps) {
   const { addItem } = useCartContext();
+  const { isFavorited, toggleFavorite } = useFavorites();
   const { toast } = useToast();
+  const favorited = isFavorited(product.id);
+
+  const handleToggleFavorite = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    await toggleFavorite(product.id);
+  };
 
   const handleAddToOrder = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -70,6 +79,7 @@ export default function ProductCard({ product, index = 0 }: ProductCardProps) {
     >
       <Link
         href={`/products/${product.id}`}
+        aria-label={`${product.name}${product.price > 0 ? `, ${formatPrice(product.price)}` : ""}${!product.inStock ? ", out of stock" : ""}`}
         className={cn(
           "group relative flex flex-col overflow-hidden rounded-xl border border-emerald-900/30 bg-[#111A11] transition-all duration-200",
           product.inStock
@@ -82,7 +92,7 @@ export default function ProductCard({ product, index = 0 }: ProductCardProps) {
           {product.imageUrl ? (
             <Image
               src={product.imageUrl}
-              alt={product.name}
+              alt={`Photo of ${product.name}`}
               fill
               className={cn(
                 "object-cover transition-transform duration-300",
@@ -135,6 +145,23 @@ export default function ProductCard({ product, index = 0 }: ProductCardProps) {
               </Badge>
             </div>
           )}
+
+          {/* Favorite heart */}
+          <button
+            onClick={handleToggleFavorite}
+            className="absolute right-1.5 top-1.5 flex h-10 w-10 items-center justify-center rounded-full bg-black/40 text-white backdrop-blur-sm transition-colors hover:bg-black/60"
+            aria-label={favorited ? "Remove from favorites" : "Add to favorites"}
+            aria-pressed={favorited}
+          >
+            <Heart
+              className={cn(
+                "h-4 w-4 transition-colors",
+                favorited
+                  ? "fill-red-500 text-red-500"
+                  : "fill-transparent text-white/70"
+              )}
+            />
+          </button>
         </div>
 
         {/* Content */}
@@ -207,12 +234,13 @@ export default function ProductCard({ product, index = 0 }: ProductCardProps) {
               size="sm"
               disabled={!product.inStock}
               onClick={handleAddToOrder}
+              aria-label={`Add ${product.name} to order`}
               className={cn(
-                "h-8 gap-1 px-3 text-xs btn-gold",
+                "h-10 sm:h-8 gap-1 px-3 text-xs btn-gold",
                 !product.inStock && "cursor-not-allowed opacity-50"
               )}
             >
-              <ShoppingCart className="h-3.5 w-3.5" />
+              <ShoppingCart className="h-4 w-4 sm:h-3.5 sm:w-3.5" />
               <span className="hidden sm:inline">Add</span>
             </Button>
           </div>

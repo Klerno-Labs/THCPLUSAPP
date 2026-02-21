@@ -18,32 +18,58 @@ interface SendSmsParams {
   body: string;
 }
 
-export async function sendSms({ to, body }: SendSmsParams) {
+export async function sendSms({ to, body }: SendSmsParams, maxRetries = 3) {
+  console.log(`[Twilio] Sending SMS to ${to} — "${body.slice(0, 60)}..."`);
+
   const client = getClient();
   if (!client) {
     console.log("[Twilio] SMS skipped (not configured):", { to, body: body.slice(0, 50) });
     return { success: false, error: "Twilio not configured" };
   }
 
-  try {
-    const createParams: Record<string, string> = { body, to };
-
-    // Prefer Messaging Service SID (handles number rotation + compliance)
-    if (process.env.TWILIO_MESSAGING_SERVICE_SID) {
-      createParams.messagingServiceSid = process.env.TWILIO_MESSAGING_SERVICE_SID;
-    } else if (process.env.TWILIO_PHONE_NUMBER) {
-      createParams.from = process.env.TWILIO_PHONE_NUMBER;
-    } else {
-      console.log("[Twilio] SMS skipped (no from number or messaging service):", { to });
-      return { success: false, error: "No sender configured" };
-    }
-
-    const message = await client.messages.create(createParams);
-    return { success: true, sid: message.sid };
-  } catch (error) {
-    console.error("Twilio SMS error:", error);
-    return { success: false, error };
+  if (!process.env.TWILIO_MESSAGING_SERVICE_SID && !process.env.TWILIO_PHONE_NUMBER) {
+    console.log("[Twilio] SMS skipped (no from number or messaging service):", { to });
+    return { success: false, error: "No sender configured" };
   }
+
+  let lastError: unknown = null;
+
+  for (let attempt = 0; attempt < maxRetries; attempt++) {
+    try {
+      const createParams: { body: string; to: string; messagingServiceSid?: string; from?: string } = { body, to };
+
+      if (process.env.TWILIO_MESSAGING_SERVICE_SID) {
+        createParams.messagingServiceSid = process.env.TWILIO_MESSAGING_SERVICE_SID;
+      } else {
+        createParams.from = process.env.TWILIO_PHONE_NUMBER;
+      }
+
+      const message = await client.messages.create(createParams);
+      console.log(`[Twilio] SMS sent successfully — SID: ${message.sid}`);
+      return { success: true, sid: message.sid };
+    } catch (error: unknown) {
+      lastError = error;
+      const errCode = (error as { code?: number })?.code;
+      const errMsg = (error as { message?: string })?.message;
+
+      // Don't retry on client errors (invalid number, etc.)
+      if (errCode && errCode >= 20000 && errCode < 30000) {
+        console.error(`[Twilio] Non-retryable error (code ${errCode}): ${errMsg}`);
+        break;
+      }
+
+      console.warn(`[Twilio] Attempt ${attempt + 1}/${maxRetries} failed: ${errMsg || error}`);
+
+      if (attempt < maxRetries - 1) {
+        const delay = Math.min(1000 * Math.pow(2, attempt), 8000);
+        console.warn(`[Twilio] Retrying in ${delay}ms...`);
+        await new Promise((r) => setTimeout(r, delay));
+      }
+    }
+  }
+
+  console.error("[Twilio] SMS failed after all retries:", lastError);
+  return { success: false, error: lastError };
 }
 
 export function getOrderReadySms(

@@ -458,8 +458,112 @@ export default function StaffManagementPage() {
         </div>
       </div>
 
-      {/* ─── Staff Table ─────────────────────────────────── */}
-      <div className="overflow-hidden rounded-xl border border-emerald-900/30 bg-[#111A11]">
+      {/* ─── Mobile Staff Cards (visible below sm breakpoint) ── */}
+      <div className="space-y-3 sm:hidden">
+        <AnimatePresence>
+          {staff.map((member) => {
+            const isCurrentUser = member.email === currentEmail;
+            const isOwner = member.role === "OWNER";
+
+            return (
+              <motion.div
+                key={member.id}
+                layout
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0, x: -50 }}
+                className={cn(
+                  "rounded-xl border border-emerald-900/30 bg-[#111A11] p-4",
+                  !member.isActive && "opacity-50"
+                )}
+              >
+                {/* Header: avatar + name + role badge */}
+                <div className="flex items-start justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-emerald-900/30 text-sm font-bold text-emerald-400">
+                      {member.name
+                        .split(" ")
+                        .map((n) => n[0])
+                        .join("")}
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-zinc-200">
+                        {member.name}
+                        {isCurrentUser && (
+                          <span className="ml-1.5 text-[10px] text-zinc-500">(you)</span>
+                        )}
+                      </p>
+                      <p className="text-xs text-zinc-500">{member.email}</p>
+                    </div>
+                  </div>
+                  <Badge
+                    className={cn("text-[11px]", getRoleBadge(member.role))}
+                  >
+                    {member.role}
+                  </Badge>
+                </div>
+
+                {/* Info row */}
+                <div className="mt-3 flex items-center gap-4">
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-[10px] uppercase tracking-wider text-zinc-600">Joined</span>
+                    <span className="text-xs text-zinc-400">
+                      {new Date(member.createdAt).toLocaleDateString()}
+                    </span>
+                  </div>
+                  <Badge
+                    variant={member.isActive ? "success" : "secondary"}
+                    className="text-[10px]"
+                  >
+                    {member.isActive ? "Active" : "Inactive"}
+                  </Badge>
+                </div>
+
+                {/* Actions */}
+                {(!isCurrentUser && !isOwner) && (
+                  <div className="mt-3 flex items-center gap-2 border-t border-emerald-900/20 pt-3">
+                    <button
+                      onClick={() => handleToggleActive(member)}
+                      className={cn(
+                        "flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors",
+                        member.isActive
+                          ? "text-yellow-400 hover:bg-yellow-900/20"
+                          : "text-emerald-400 hover:bg-emerald-900/20"
+                      )}
+                      aria-label={member.isActive ? `Deactivate ${member.name}` : `Activate ${member.name}`}
+                    >
+                      {member.isActive ? (
+                        <><UserX className="h-3.5 w-3.5" /> Deactivate</>
+                      ) : (
+                        <><UserCheck className="h-3.5 w-3.5" /> Activate</>
+                      )}
+                    </button>
+                    <button
+                      onClick={() => setRemoveTarget(member)}
+                      className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium text-red-400 transition-colors hover:bg-red-900/20"
+                      aria-label={`Remove ${member.name}`}
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                      Remove
+                    </button>
+                  </div>
+                )}
+
+                {(isCurrentUser || isOwner) && (
+                  <div className="mt-3 border-t border-emerald-900/20 pt-3">
+                    <span className="text-[10px] text-zinc-600">
+                      {isCurrentUser ? "This is your account" : "Protected account"}
+                    </span>
+                  </div>
+                )}
+              </motion.div>
+            );
+          })}
+        </AnimatePresence>
+      </div>
+
+      {/* ─── Staff Table (visible at sm and above) ─────── */}
+      <div className="hidden overflow-hidden rounded-xl border border-emerald-900/30 bg-[#111A11] sm:block">
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead>

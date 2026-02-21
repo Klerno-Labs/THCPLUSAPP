@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { openai, ORDER_SCORING_PROMPT } from "@/lib/openai";
 import { getPusherServer, CHANNELS, EVENTS } from "@/lib/pusher";
@@ -19,6 +20,14 @@ interface ScoreOrderInput {
 // ─── POST: AI Order Priority Scoring ────────────────────
 export async function POST(request: NextRequest) {
   try {
+    // Allow staff or internal server-to-server calls
+    const session = await auth();
+    const isStaff = session?.user && ["OWNER", "MANAGER", "STAFF"].includes((session.user as any).role);
+    const isInternal = request.headers.get("x-internal-call") === "true";
+    if (!isStaff && !isInternal) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
     const body = (await request.json()) as ScoreOrderInput;
     const { orderId, items, customerTier, createdAt, expiresAt } = body;
 

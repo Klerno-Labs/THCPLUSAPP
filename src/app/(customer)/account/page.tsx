@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { signOut } from "next-auth/react";
 import Link from "next/link";
 import {
   User,
@@ -31,10 +32,8 @@ interface OrderHistoryItem {
   orderNumber: string;
   status: string;
   totalAmount: number;
+  totalItems: number;
   createdAt: string;
-  _count: {
-    items: number;
-  };
 }
 
 interface AccountData {
@@ -143,10 +142,10 @@ export default function AccountPage() {
               </div>
 
               <div className="flex w-full flex-col gap-3">
-                <Button asChild size="lg" className="w-full">
+                <Button asChild size="lg" className="w-full h-12">
                   <Link href="/auth/signin">Sign In</Link>
                 </Button>
-                <Button asChild variant="outline" size="lg" className="w-full">
+                <Button asChild variant="outline" size="lg" className="w-full h-12">
                   <Link href="/auth/signup">Create Account</Link>
                 </Button>
               </div>
@@ -252,10 +251,10 @@ export default function AccountPage() {
               <Link
                 key={item.href}
                 href={item.href}
-                className="group flex flex-col gap-2 rounded-xl border border-emerald-900/30 bg-[#111A11] p-4 transition-all hover:border-emerald-700/40 hover:shadow-glow"
+                className="group flex flex-col gap-2 rounded-xl border border-emerald-900/30 bg-[#111A11] p-4 sm:p-4 min-h-[5.5rem] transition-all hover:border-emerald-700/40 hover:shadow-glow active:scale-[0.98]"
               >
                 <div className="flex items-center justify-between">
-                  <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-emerald-900/20 text-emerald-400">
+                  <div className="flex h-10 w-10 sm:h-9 sm:w-9 items-center justify-center rounded-lg bg-emerald-900/20 text-emerald-400">
                     <item.icon className="h-5 w-5" />
                   </div>
                   <ChevronRight className="h-4 w-4 text-zinc-600 transition-transform group-hover:translate-x-0.5 group-hover:text-zinc-400" />
@@ -300,7 +299,7 @@ export default function AccountPage() {
                   <Link
                     key={order.id}
                     href={`/order/${order.id}`}
-                    className="group flex items-center justify-between rounded-xl border border-emerald-900/30 bg-[#111A11] p-4 transition-colors hover:border-emerald-700/40"
+                    className="group flex items-center justify-between rounded-xl border border-emerald-900/30 bg-[#111A11] p-4 transition-colors hover:border-emerald-700/40 active:scale-[0.99]"
                   >
                     <div className="flex items-center gap-3">
                       <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-[#0D150D]">
@@ -323,8 +322,8 @@ export default function AccountPage() {
                         <div className="mt-0.5 flex items-center gap-2 text-xs text-zinc-500">
                           <span>{formatDate(order.createdAt)}</span>
                           <span>
-                            {order._count.items} item
-                            {order._count.items !== 1 ? "s" : ""}
+                            {order.totalItems} item
+                            {order.totalItems !== 1 ? "s" : ""}
                           </span>
                         </div>
                       </div>
@@ -348,15 +347,7 @@ export default function AccountPage() {
             <Button
               variant="ghost"
               className="gap-2 text-zinc-500 hover:text-red-400"
-              onClick={async () => {
-                try {
-                  await fetch("/api/auth/signout", { method: "POST" });
-                  window.location.href = "/";
-                } catch {
-                  // Fallback
-                  window.location.href = "/";
-                }
-              }}
+              onClick={() => signOut({ callbackUrl: "/" })}
             >
               <LogOut className="h-4 w-4" />
               Sign Out

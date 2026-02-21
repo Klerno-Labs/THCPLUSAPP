@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from "next/server";
-import { kv } from "@vercel/kv";
 import { prisma } from "@/lib/db";
 import { openai, UPSELL_SYSTEM_PROMPT } from "@/lib/openai";
 import { createHash } from "crypto";
@@ -27,13 +26,18 @@ export async function POST(request: NextRequest) {
     const hash = createHash("sha256").update(sortedIds).digest("hex");
     const cacheKey = `upsell:${hash}`;
 
-    // ── Check Vercel KV cache first ──
-    const cached = await kv.get<AiUpsellSuggestion[]>(cacheKey);
-    if (cached) {
-      return NextResponse.json({
-        suggestions: cached,
-        source: "cache",
-      });
+    // ── Check Vercel KV cache first (graceful when KV not configured) ──
+    try {
+      const { kv } = await import("@vercel/kv");
+      const cached = await kv.get<AiUpsellSuggestion[]>(cacheKey);
+      if (cached) {
+        return NextResponse.json({
+          suggestions: cached,
+          source: "cache",
+        });
+      }
+    } catch {
+      // KV not configured — skip cache lookup
     }
 
     // ── Fetch cart items ──
@@ -135,9 +139,14 @@ export async function POST(request: NextRequest) {
       console.error("Failed to parse AI upsell response:", rawContent);
     }
 
-    // ── Cache in Vercel KV for 1 hour ──
+    // ── Cache in Vercel KV for 1 hour (graceful when KV not configured) ──
     if (suggestions.length > 0) {
-      await kv.set(cacheKey, suggestions, { ex: 3600 });
+      try {
+        const { kv } = await import("@vercel/kv");
+        await kv.set(cacheKey, suggestions, { ex: 3600 });
+      } catch {
+        // KV not configured — skip caching
+      }
     }
 
     return NextResponse.json({

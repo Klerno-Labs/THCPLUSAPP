@@ -13,6 +13,7 @@ import {
 import { cn } from "@/lib/utils";
 import { useCartContext } from "@/context/CartContext";
 import AgeGate from "@/components/customer/AgeGate";
+import { AiChatbot } from "@/components/customer/AiChatbot";
 
 const navItems = [
   { href: "/", label: "Home", icon: Home },
@@ -48,7 +49,7 @@ export default function CustomerLayout({
               alt="THC Plus"
               width={32}
               height={32}
-              className="h-8 w-8 invert"
+              className="h-8 w-8 brightness-0 invert"
             />
             <div className="flex items-baseline gap-0.5">
               <span className="text-lg font-bold tracking-tight text-white">
@@ -61,11 +62,12 @@ export default function CustomerLayout({
           </Link>
 
           {/* Desktop Nav */}
-          <nav className="hidden items-center gap-1 md:flex">
+          <nav className="hidden items-center gap-1 md:flex" aria-label="Main navigation" role="navigation">
             {navItems.slice(0, 3).map((item) => (
               <Link
                 key={item.href}
                 href={item.href}
+                aria-current={isActive(item.href) ? "page" : undefined}
                 className={cn(
                   "flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
                   isActive(item.href)
@@ -83,6 +85,7 @@ export default function CustomerLayout({
           <div className="flex items-center gap-2">
             <Link
               href="/cart"
+              aria-label={`Shopping cart${totalItems > 0 ? `, ${totalItems} items` : ""}`}
               className="relative flex h-10 w-10 items-center justify-center rounded-lg text-zinc-400 transition-colors hover:bg-[#111A11] hover:text-white"
             >
               <ShoppingCart className="h-5 w-5" />
@@ -99,6 +102,7 @@ export default function CustomerLayout({
             </Link>
             <Link
               href="/account"
+              aria-label="Account"
               className="hidden h-10 w-10 items-center justify-center rounded-lg text-zinc-400 transition-colors hover:bg-[#111A11] hover:text-white md:flex"
             >
               <User className="h-5 w-5" />
@@ -112,8 +116,11 @@ export default function CustomerLayout({
         {children}
       </main>
 
+      {/* AI Budtender Chat Widget */}
+      <AiChatbot />
+
       {/* Mobile Bottom Navigation */}
-      <nav className="fixed bottom-0 left-0 right-0 z-50 border-t border-emerald-900/30 bg-[#090F09]/95 backdrop-blur-md sm:hidden">
+      <nav className="fixed bottom-0 left-0 right-0 z-50 border-t border-emerald-900/30 bg-[#090F09]/95 backdrop-blur-md sm:hidden" aria-label="Mobile navigation" role="navigation">
         <div className="flex h-16 items-center justify-around px-2">
           {navItems.map((item) => {
             const active = isActive(item.href);
@@ -121,6 +128,7 @@ export default function CustomerLayout({
               <Link
                 key={item.href}
                 href={item.href}
+                aria-current={active ? "page" : undefined}
                 className={cn(
                   "relative flex flex-col items-center gap-0.5 rounded-lg px-3 py-1.5 transition-colors",
                   active ? "text-gold" : "text-zinc-500"

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { createOrderSchema } from "@/lib/validations";
 import { generateOrderNumber } from "@/lib/utils";
@@ -158,7 +159,7 @@ export async function POST(request: NextRequest) {
 
     fetch(`${baseUrl}/api/ai/score-order`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", "x-internal-call": "true" },
       body: JSON.stringify({
         orderId: order.id,
         items: order.items.map((item) => ({
@@ -187,6 +188,14 @@ export async function POST(request: NextRequest) {
 // ─── GET: List Orders (Admin) ───────────────────────────
 export async function GET(request: NextRequest) {
   try {
+    const session = await auth();
+    if (
+      !session?.user ||
+      !["OWNER", "MANAGER", "STAFF"].includes((session.user as any).role)
+    ) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
     const { searchParams } = new URL(request.url);
 
     // Pagination

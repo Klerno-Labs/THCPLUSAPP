@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useCallback } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Megaphone,
@@ -16,6 +16,8 @@ import {
   Plus,
   Eye,
   ChevronDown,
+  Loader2,
+  AlertCircle,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -24,94 +26,47 @@ import { Badge } from "@/components/ui/badge";
 
 // ─── Types ───────────────────────────────────────────────
 type DeliveryMethod = "sms" | "in_app" | "both";
-type TargetAudience = "all" | "seedling" | "grower" | "cultivator" | "master_grower" | "inactive";
+type TargetAudience =
+  | "all"
+  | "seedling"
+  | "grower"
+  | "cultivator"
+  | "master_grower"
+  | "inactive";
 type PromotionStatus = "sent" | "scheduled" | "draft";
 
 interface Promotion {
   id: string;
   titleEn: string;
-  titleEs: string;
+  titleEs: string | null;
   bodyEn: string;
-  bodyEs: string;
+  bodyEs: string | null;
   method: DeliveryMethod;
   audience: TargetAudience;
   status: PromotionStatus;
-  scheduledAt?: string;
-  sentAt?: string;
+  scheduledAt: string | null;
+  sentAt: string | null;
   recipientCount: number;
   openRate?: number;
   createdBy: string;
+  createdAt: string;
 }
 
-// ─── Mock Data ───────────────────────────────────────────
-const MOCK_PROMOTIONS: Promotion[] = [
-  {
-    id: "promo1",
-    titleEn: "Weekend Flash Sale - 20% Off Edibles!",
-    titleEs: "Venta Flash de Fin de Semana - 20% de Descuento en Comestibles!",
-    bodyEn: "This weekend only: Get 20% off all edibles. Use code WEEKEND20 at checkout or mention in-store. Valid Sat-Sun.",
-    bodyEs: "Solo este fin de semana: Obtén 20% de descuento en todos los comestibles. Usa el código WEEKEND20. Válido Sáb-Dom.",
-    method: "both",
-    audience: "all",
-    status: "sent",
-    sentAt: "2025-02-15T10:00:00",
-    recipientCount: 1247,
-    openRate: 34.2,
-    createdBy: "Marcus Chen",
-  },
-  {
-    id: "promo2",
-    titleEn: "VIP Early Access: New Strain Drop",
-    titleEs: "Acceso Anticipado VIP: Nueva Variedad Disponible",
-    bodyEn: "As a valued Master Grower, get early access to our new Wedding Cake x Gelato cross. Available 24hrs before general release.",
-    bodyEs: "Como valioso Master Grower, obtén acceso anticipado a nuestro nuevo cruce Wedding Cake x Gelato. Disponible 24hrs antes.",
-    method: "sms",
-    audience: "master_grower",
-    status: "scheduled",
-    scheduledAt: "2025-02-22T09:00:00",
-    recipientCount: 89,
-    createdBy: "Priya Patel",
-  },
-  {
-    id: "promo3",
-    titleEn: "Welcome Back! 15% Off Your Next Order",
-    titleEs: "Bienvenido de Vuelta! 15% de Descuento en Tu Próximo Pedido",
-    bodyEn: "We miss you! Come back and enjoy 15% off your next order. No minimum purchase. Code: COMEBACK15",
-    bodyEs: "Te extrañamos! Vuelve y disfruta de 15% de descuento. Sin compra mínima. Código: COMEBACK15",
-    method: "sms",
-    audience: "inactive",
-    status: "sent",
-    sentAt: "2025-02-10T14:00:00",
-    recipientCount: 342,
-    openRate: 28.7,
-    createdBy: "Marcus Chen",
-  },
-  {
-    id: "promo4",
-    titleEn: "Double Points Tuesday!",
-    titleEs: "Martes de Puntos Dobles!",
-    bodyEn: "Every Tuesday this month, earn 2x loyalty points on all purchases. Stack with existing promotions!",
-    bodyEs: "Todos los martes de este mes, gana 2x puntos de lealtad en todas las compras. Acumula con promociones existentes!",
-    method: "in_app",
-    audience: "all",
-    status: "sent",
-    sentAt: "2025-02-04T08:00:00",
-    recipientCount: 1247,
-    openRate: 41.5,
-    createdBy: "Lucia Fernandez",
-  },
+// ─── Option Constants ────────────────────────────────────
+const AUDIENCE_OPTIONS: { value: TargetAudience; label: string }[] = [
+  { value: "all", label: "All Customers" },
+  { value: "seedling", label: "Seedling Tier" },
+  { value: "grower", label: "Grower Tier" },
+  { value: "cultivator", label: "Cultivator Tier" },
+  { value: "master_grower", label: "Master Grower Tier" },
+  { value: "inactive", label: "Inactive (30+ days)" },
 ];
 
-const AUDIENCE_OPTIONS: { value: TargetAudience; label: string; count: number }[] = [
-  { value: "all", label: "All Customers", count: 1247 },
-  { value: "seedling", label: "Seedling Tier", count: 523 },
-  { value: "grower", label: "Grower Tier", count: 345 },
-  { value: "cultivator", label: "Cultivator Tier", count: 290 },
-  { value: "master_grower", label: "Master Grower Tier", count: 89 },
-  { value: "inactive", label: "Inactive (30+ days)", count: 342 },
-];
-
-const METHOD_OPTIONS: { value: DeliveryMethod; label: string; icon: React.ElementType }[] = [
+const METHOD_OPTIONS: {
+  value: DeliveryMethod;
+  label: string;
+  icon: React.ElementType;
+}[] = [
   { value: "sms", label: "SMS", icon: Smartphone },
   { value: "in_app", label: "In-App", icon: Bell },
   { value: "both", label: "Both", icon: MessageSquare },
@@ -120,10 +75,22 @@ const METHOD_OPTIONS: { value: DeliveryMethod; label: string; icon: React.Elemen
 // ─── Compose Promotion Form ──────────────────────────────
 interface ComposeFormProps {
   onClose: () => void;
-  onSend: (promo: Partial<Promotion>) => void;
+  onSend: (payload: ComposePayload) => Promise<void>;
+  sending: boolean;
 }
 
-function ComposePromotionForm({ onClose, onSend }: ComposeFormProps) {
+interface ComposePayload {
+  titleEn: string;
+  titleEs: string;
+  bodyEn: string;
+  bodyEs: string;
+  type: string;
+  targetAudience: TargetAudience;
+  sendNow: boolean;
+  scheduledAt?: string;
+}
+
+function ComposePromotionForm({ onClose, onSend, sending }: ComposeFormProps) {
   const [form, setForm] = useState({
     titleEn: "",
     titleEs: "",
@@ -135,32 +102,28 @@ function ComposePromotionForm({ onClose, onSend }: ComposeFormProps) {
     scheduledDate: "",
     scheduledTime: "",
   });
-  const [_preview, _setPreview] = useState(false);
 
-  const selectedAudience = AUDIENCE_OPTIONS.find((a) => a.value === form.audience);
+  const selectedAudience = AUDIENCE_OPTIONS.find(
+    (a) => a.value === form.audience
+  );
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    const promo: Partial<Promotion> = {
+    const payload: ComposePayload = {
       titleEn: form.titleEn,
       titleEs: form.titleEs,
       bodyEn: form.bodyEn,
       bodyEs: form.bodyEs,
-      method: form.method,
-      audience: form.audience,
-      recipientCount: selectedAudience?.count || 0,
-      createdBy: "Marcus Chen",
-      status: form.sendNow ? "sent" : "scheduled",
-      ...(form.sendNow
-        ? { sentAt: new Date().toISOString() }
-        : {
-            scheduledAt: `${form.scheduledDate}T${form.scheduledTime}:00`,
-          }),
+      type: form.method.toUpperCase() === "IN_APP" ? "IN_APP" : form.method.toUpperCase(),
+      targetAudience: form.audience,
+      sendNow: form.sendNow,
+      ...(!form.sendNow && form.scheduledDate && form.scheduledTime
+        ? { scheduledAt: `${form.scheduledDate}T${form.scheduledTime}:00Z` }
+        : {}),
     };
 
-    onSend(promo);
-    onClose();
+    await onSend(payload);
   };
 
   return (
@@ -184,7 +147,8 @@ function ComposePromotionForm({ onClose, onSend }: ComposeFormProps) {
           </h2>
           <button
             onClick={onClose}
-            className="rounded-lg p-1.5 text-zinc-500 hover:bg-zinc-800 hover:text-zinc-300"
+            disabled={sending}
+            className="rounded-lg p-1.5 text-zinc-500 hover:bg-zinc-800 hover:text-zinc-300 disabled:opacity-50"
           >
             <X className="h-5 w-5" />
           </button>
@@ -206,9 +170,12 @@ function ComposePromotionForm({ onClose, onSend }: ComposeFormProps) {
                 </label>
                 <Input
                   value={form.titleEn}
-                  onChange={(e) => setForm({ ...form, titleEn: e.target.value })}
+                  onChange={(e) =>
+                    setForm({ ...form, titleEn: e.target.value })
+                  }
                   placeholder="e.g. Weekend Flash Sale - 20% Off!"
                   required
+                  disabled={sending}
                 />
               </div>
               <div>
@@ -217,11 +184,14 @@ function ComposePromotionForm({ onClose, onSend }: ComposeFormProps) {
                 </label>
                 <textarea
                   value={form.bodyEn}
-                  onChange={(e) => setForm({ ...form, bodyEn: e.target.value })}
+                  onChange={(e) =>
+                    setForm({ ...form, bodyEn: e.target.value })
+                  }
                   placeholder="Write your promotion message..."
                   rows={3}
                   required
-                  className="w-full rounded-lg border border-emerald-900/50 bg-zinc-900/80 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 focus:border-emerald-600 focus:outline-none focus:ring-1 focus:ring-emerald-500/50"
+                  disabled={sending}
+                  className="w-full rounded-lg border border-emerald-900/50 bg-zinc-900/80 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 focus:border-emerald-600 focus:outline-none focus:ring-1 focus:ring-emerald-500/50 disabled:opacity-50"
                 />
               </div>
             </div>
@@ -242,8 +212,11 @@ function ComposePromotionForm({ onClose, onSend }: ComposeFormProps) {
                 </label>
                 <Input
                   value={form.titleEs}
-                  onChange={(e) => setForm({ ...form, titleEs: e.target.value })}
+                  onChange={(e) =>
+                    setForm({ ...form, titleEs: e.target.value })
+                  }
                   placeholder="e.g. Venta Flash de Fin de Semana - 20% de Descuento!"
+                  disabled={sending}
                 />
               </div>
               <div>
@@ -252,10 +225,13 @@ function ComposePromotionForm({ onClose, onSend }: ComposeFormProps) {
                 </label>
                 <textarea
                   value={form.bodyEs}
-                  onChange={(e) => setForm({ ...form, bodyEs: e.target.value })}
-                  placeholder="Escribe tu mensaje de promoción..."
+                  onChange={(e) =>
+                    setForm({ ...form, bodyEs: e.target.value })
+                  }
+                  placeholder="Escribe tu mensaje de promoci\u00f3n..."
                   rows={3}
-                  className="w-full rounded-lg border border-emerald-900/50 bg-zinc-900/80 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 focus:border-emerald-600 focus:outline-none focus:ring-1 focus:ring-emerald-500/50"
+                  disabled={sending}
+                  className="w-full rounded-lg border border-emerald-900/50 bg-zinc-900/80 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 focus:border-emerald-600 focus:outline-none focus:ring-1 focus:ring-emerald-500/50 disabled:opacity-50"
                 />
               </div>
             </div>
@@ -271,9 +247,12 @@ function ComposePromotionForm({ onClose, onSend }: ComposeFormProps) {
                 <button
                   key={option.value}
                   type="button"
-                  onClick={() => setForm({ ...form, audience: option.value })}
+                  disabled={sending}
+                  onClick={() =>
+                    setForm({ ...form, audience: option.value })
+                  }
                   className={cn(
-                    "rounded-lg border px-3 py-2 text-left transition-colors",
+                    "rounded-lg border px-3 py-2 text-left transition-colors disabled:opacity-50",
                     form.audience === option.value
                       ? "border-emerald-600/50 bg-emerald-600/10"
                       : "border-emerald-900/20 bg-[#090F09] hover:border-emerald-900/40"
@@ -288,9 +267,6 @@ function ComposePromotionForm({ onClose, onSend }: ComposeFormProps) {
                     )}
                   >
                     {option.label}
-                  </p>
-                  <p className="text-[10px] text-zinc-600">
-                    {option.count.toLocaleString()} recipients
                   </p>
                 </button>
               ))}
@@ -309,9 +285,12 @@ function ComposePromotionForm({ onClose, onSend }: ComposeFormProps) {
                   <button
                     key={option.value}
                     type="button"
-                    onClick={() => setForm({ ...form, method: option.value })}
+                    disabled={sending}
+                    onClick={() =>
+                      setForm({ ...form, method: option.value })
+                    }
                     className={cn(
-                      "flex flex-1 items-center justify-center gap-2 rounded-lg border py-2.5 text-sm font-medium transition-colors",
+                      "flex flex-1 items-center justify-center gap-2 rounded-lg border py-2.5 text-sm font-medium transition-colors disabled:opacity-50",
                       form.method === option.value
                         ? "border-emerald-600/50 bg-emerald-600/10 text-emerald-400"
                         : "border-emerald-900/20 bg-[#090F09] text-zinc-500 hover:border-emerald-900/40 hover:text-zinc-300"
@@ -333,9 +312,10 @@ function ComposePromotionForm({ onClose, onSend }: ComposeFormProps) {
             <div className="flex gap-2">
               <button
                 type="button"
+                disabled={sending}
                 onClick={() => setForm({ ...form, sendNow: true })}
                 className={cn(
-                  "flex flex-1 items-center justify-center gap-2 rounded-lg border py-2.5 text-sm font-medium transition-colors",
+                  "flex flex-1 items-center justify-center gap-2 rounded-lg border py-2.5 text-sm font-medium transition-colors disabled:opacity-50",
                   form.sendNow
                     ? "border-emerald-600/50 bg-emerald-600/10 text-emerald-400"
                     : "border-emerald-900/20 bg-[#090F09] text-zinc-500"
@@ -346,9 +326,10 @@ function ComposePromotionForm({ onClose, onSend }: ComposeFormProps) {
               </button>
               <button
                 type="button"
+                disabled={sending}
                 onClick={() => setForm({ ...form, sendNow: false })}
                 className={cn(
-                  "flex flex-1 items-center justify-center gap-2 rounded-lg border py-2.5 text-sm font-medium transition-colors",
+                  "flex flex-1 items-center justify-center gap-2 rounded-lg border py-2.5 text-sm font-medium transition-colors disabled:opacity-50",
                   !form.sendNow
                     ? "border-emerald-600/50 bg-emerald-600/10 text-emerald-400"
                     : "border-emerald-900/20 bg-[#090F09] text-zinc-500"
@@ -372,6 +353,7 @@ function ComposePromotionForm({ onClose, onSend }: ComposeFormProps) {
                       setForm({ ...form, scheduledDate: e.target.value })
                     }
                     required={!form.sendNow}
+                    disabled={sending}
                   />
                 </div>
                 <div className="flex-1">
@@ -385,6 +367,7 @@ function ComposePromotionForm({ onClose, onSend }: ComposeFormProps) {
                       setForm({ ...form, scheduledTime: e.target.value })
                     }
                     required={!form.sendNow}
+                    disabled={sending}
                   />
                 </div>
               </div>
@@ -393,14 +376,24 @@ function ComposePromotionForm({ onClose, onSend }: ComposeFormProps) {
 
           {/* Submit */}
           <div className="flex justify-end gap-3 border-t border-emerald-900/20 pt-4">
-            <Button variant="outline" type="button" onClick={onClose}>
+            <Button
+              variant="outline"
+              type="button"
+              onClick={onClose}
+              disabled={sending}
+            >
               Cancel
             </Button>
-            <Button type="submit" className="gap-2">
-              {form.sendNow ? (
+            <Button type="submit" className="gap-2" disabled={sending}>
+              {sending ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Sending...
+                </>
+              ) : form.sendNow ? (
                 <>
                   <Send className="h-4 w-4" />
-                  Send to {selectedAudience?.count.toLocaleString()} recipients
+                  Send to {selectedAudience?.label}
                 </>
               ) : (
                 <>
@@ -418,47 +411,118 @@ function ComposePromotionForm({ onClose, onSend }: ComposeFormProps) {
 
 // ─── Promotions Page ─────────────────────────────────────
 export default function PromotionsPage() {
-  const [promotions, setPromotions] = useState<Promotion[]>(MOCK_PROMOTIONS);
+  const [promotions, setPromotions] = useState<Promotion[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [fetchError, setFetchError] = useState<string | null>(null);
   const [showCompose, setShowCompose] = useState(false);
+  const [sending, setSending] = useState(false);
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  const handleSendPromotion = useCallback((data: Partial<Promotion>) => {
-    const newPromo: Promotion = {
-      id: `promo_${Date.now()}`,
-      titleEn: data.titleEn || "",
-      titleEs: data.titleEs || "",
-      bodyEn: data.bodyEn || "",
-      bodyEs: data.bodyEs || "",
-      method: data.method || "both",
-      audience: data.audience || "all",
-      status: data.status || "sent",
-      sentAt: data.sentAt,
-      scheduledAt: data.scheduledAt,
-      recipientCount: data.recipientCount || 0,
-      createdBy: data.createdBy || "Marcus Chen",
-    };
-    setPromotions((prev) => [newPromo, ...prev]);
+  // ── Fetch promotions from API ──
+  const fetchPromotions = useCallback(async () => {
+    try {
+      setFetchError(null);
+      const res = await fetch("/api/promotions");
+      if (!res.ok) {
+        throw new Error(`Failed to fetch promotions (${res.status})`);
+      }
+      const data: Promotion[] = await res.json();
+      setPromotions(data);
+    } catch (err) {
+      console.error("Error fetching promotions:", err);
+      setFetchError(
+        err instanceof Error ? err.message : "Failed to load promotions"
+      );
+    } finally {
+      setLoading(false);
+    }
   }, []);
+
+  useEffect(() => {
+    fetchPromotions();
+  }, [fetchPromotions]);
+
+  // ── Auto-dismiss messages ──
+  useEffect(() => {
+    if (successMessage) {
+      const timer = setTimeout(() => setSuccessMessage(null), 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [successMessage]);
+
+  useEffect(() => {
+    if (errorMessage) {
+      const timer = setTimeout(() => setErrorMessage(null), 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [errorMessage]);
+
+  // ── Send promotion via API ──
+  const handleSendPromotion = useCallback(
+    async (payload: ComposePayload) => {
+      setSending(true);
+      setErrorMessage(null);
+      try {
+        const res = await fetch("/api/promotions", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+
+        if (!res.ok) {
+          const errData = await res.json().catch(() => ({}));
+          throw new Error(
+            errData.error || `Failed to create promotion (${res.status})`
+          );
+        }
+
+        const result = await res.json();
+
+        if (payload.sendNow) {
+          setSuccessMessage(
+            `Promotion sent to ${result.recipientCount?.toLocaleString() ?? 0} recipients (${result.smsSent?.toLocaleString() ?? 0} SMS delivered)`
+          );
+        } else {
+          setSuccessMessage("Promotion scheduled successfully");
+        }
+
+        setShowCompose(false);
+
+        // Refetch the promotions list
+        await fetchPromotions();
+      } catch (err) {
+        console.error("Error sending promotion:", err);
+        setErrorMessage(
+          err instanceof Error ? err.message : "Failed to send promotion"
+        );
+      } finally {
+        setSending(false);
+      }
+    },
+    [fetchPromotions]
+  );
 
   const getStatusBadge = (status: PromotionStatus) => {
     switch (status) {
       case "sent":
         return (
-          <Badge className="bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+          <Badge className="border border-emerald-500/20 bg-emerald-500/10 text-emerald-400">
             <CheckCircle2 className="mr-1 h-3 w-3" />
             Sent
           </Badge>
         );
       case "scheduled":
         return (
-          <Badge className="bg-blue-500/10 text-blue-400 border border-blue-500/20">
+          <Badge className="border border-blue-500/20 bg-blue-500/10 text-blue-400">
             <Clock className="mr-1 h-3 w-3" />
             Scheduled
           </Badge>
         );
       case "draft":
         return (
-          <Badge className="bg-zinc-500/10 text-zinc-400 border border-zinc-500/20">
+          <Badge className="border border-zinc-500/20 bg-zinc-500/10 text-zinc-400">
             Draft
           </Badge>
         );
@@ -492,8 +556,9 @@ export default function PromotionsPage() {
             Promotions
           </h1>
           <p className="mt-1 text-sm text-zinc-500">
-            {promotions.length} promotions &middot;{" "}
-            {promotions.filter((p) => p.status === "scheduled").length} scheduled
+            {loading
+              ? "Loading..."
+              : `${promotions.length} promotions \u00b7 ${promotions.filter((p) => p.status === "scheduled").length} scheduled`}
           </p>
         </div>
         <Button className="gap-2" onClick={() => setShowCompose(true)}>
@@ -502,132 +567,210 @@ export default function PromotionsPage() {
         </Button>
       </div>
 
-      {/* ─── Promotion History ───────────────────────────── */}
-      <div className="space-y-3">
-        {promotions.map((promo) => (
+      {/* ─── Success / Error Messages ────────────────────── */}
+      <AnimatePresence>
+        {successMessage && (
           <motion.div
-            key={promo.id}
-            layout
-            className="rounded-xl border border-emerald-900/30 bg-[#111A11] transition-shadow hover:shadow-lg"
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            className="mb-4 flex items-center gap-3 rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-3"
           >
-            <div className="p-5">
-              <div className="flex items-start justify-between gap-4">
-                <div className="flex-1">
-                  <div className="flex items-center gap-3">
-                    <h3 className="text-sm font-semibold text-zinc-200">
-                      {promo.titleEn}
-                    </h3>
-                    {getStatusBadge(promo.status)}
+            <CheckCircle2 className="h-5 w-5 shrink-0 text-emerald-400" />
+            <p className="flex-1 text-sm text-emerald-300">{successMessage}</p>
+            <button
+              onClick={() => setSuccessMessage(null)}
+              className="rounded-lg p-1 text-emerald-400 hover:bg-emerald-500/20"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {errorMessage && (
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            className="mb-4 flex items-center gap-3 rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3"
+          >
+            <AlertCircle className="h-5 w-5 shrink-0 text-red-400" />
+            <p className="flex-1 text-sm text-red-300">{errorMessage}</p>
+            <button
+              onClick={() => setErrorMessage(null)}
+              className="rounded-lg p-1 text-red-400 hover:bg-red-500/20"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ─── Loading State ───────────────────────────────── */}
+      {loading && (
+        <div className="flex flex-col items-center justify-center rounded-2xl border border-emerald-900/20 bg-[#111A11] py-16">
+          <Loader2 className="mb-3 h-10 w-10 animate-spin text-emerald-500" />
+          <p className="text-sm text-zinc-500">Loading promotions...</p>
+        </div>
+      )}
+
+      {/* ─── Fetch Error State ───────────────────────────── */}
+      {!loading && fetchError && (
+        <div className="flex flex-col items-center justify-center rounded-2xl border border-red-900/20 bg-[#111A11] py-16">
+          <AlertCircle className="mb-3 h-10 w-10 text-red-500" />
+          <h3 className="text-lg font-semibold text-zinc-400">
+            Failed to load promotions
+          </h3>
+          <p className="mt-1 text-sm text-zinc-600">{fetchError}</p>
+          <Button
+            variant="outline"
+            className="mt-4"
+            onClick={() => {
+              setLoading(true);
+              fetchPromotions();
+            }}
+          >
+            Try Again
+          </Button>
+        </div>
+      )}
+
+      {/* ─── Promotion History ───────────────────────────── */}
+      {!loading && !fetchError && (
+        <div className="space-y-3">
+          {promotions.map((promo) => (
+            <motion.div
+              key={promo.id}
+              layout
+              className="rounded-xl border border-emerald-900/30 bg-[#111A11] transition-shadow hover:shadow-lg"
+            >
+              <div className="p-5">
+                <div className="flex items-start justify-between gap-4">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-3">
+                      <h3 className="text-sm font-semibold text-zinc-200">
+                        {promo.titleEn}
+                      </h3>
+                      {getStatusBadge(promo.status)}
+                    </div>
+                    <p className="mt-1 line-clamp-2 text-xs text-zinc-500">
+                      {promo.bodyEn}
+                    </p>
                   </div>
-                  <p className="mt-1 line-clamp-2 text-xs text-zinc-500">
-                    {promo.bodyEn}
-                  </p>
+                </div>
+
+                <div className="mt-3 flex flex-wrap items-center gap-4 text-xs">
+                  {getMethodLabel(promo.method)}
+                  <span className="flex items-center gap-1 text-zinc-500">
+                    <Users className="h-3 w-3" />
+                    {getAudienceLabel(promo.audience)} (
+                    {promo.recipientCount.toLocaleString()})
+                  </span>
+                  {promo.sentAt && (
+                    <span className="flex items-center gap-1 text-zinc-500">
+                      <Send className="h-3 w-3" />
+                      Sent{" "}
+                      {new Date(promo.sentAt).toLocaleDateString("en-US", {
+                        month: "short",
+                        day: "numeric",
+                        hour: "numeric",
+                        minute: "2-digit",
+                      })}
+                    </span>
+                  )}
+                  {promo.scheduledAt && promo.status === "scheduled" && (
+                    <span className="flex items-center gap-1 text-blue-400">
+                      <Calendar className="h-3 w-3" />
+                      Scheduled{" "}
+                      {new Date(promo.scheduledAt).toLocaleDateString("en-US", {
+                        month: "short",
+                        day: "numeric",
+                        hour: "numeric",
+                        minute: "2-digit",
+                      })}
+                    </span>
+                  )}
+                  {promo.openRate && (
+                    <span className="flex items-center gap-1 text-emerald-400">
+                      <Eye className="h-3 w-3" />
+                      {promo.openRate}% open rate
+                    </span>
+                  )}
+                  <span className="text-zinc-600">by {promo.createdBy}</span>
                 </div>
               </div>
 
-              <div className="mt-3 flex flex-wrap items-center gap-4 text-xs">
-                {getMethodLabel(promo.method)}
-                <span className="flex items-center gap-1 text-zinc-500">
-                  <Users className="h-3 w-3" />
-                  {getAudienceLabel(promo.audience)} ({promo.recipientCount.toLocaleString()})
-                </span>
-                {promo.sentAt && (
-                  <span className="flex items-center gap-1 text-zinc-500">
-                    <Send className="h-3 w-3" />
-                    Sent{" "}
-                    {new Date(promo.sentAt).toLocaleDateString("en-US", {
-                      month: "short",
-                      day: "numeric",
-                      hour: "numeric",
-                      minute: "2-digit",
-                    })}
-                  </span>
-                )}
-                {promo.scheduledAt && promo.status === "scheduled" && (
-                  <span className="flex items-center gap-1 text-blue-400">
-                    <Calendar className="h-3 w-3" />
-                    Scheduled{" "}
-                    {new Date(promo.scheduledAt).toLocaleDateString("en-US", {
-                      month: "short",
-                      day: "numeric",
-                      hour: "numeric",
-                      minute: "2-digit",
-                    })}
-                  </span>
-                )}
-                {promo.openRate && (
-                  <span className="flex items-center gap-1 text-emerald-400">
-                    <Eye className="h-3 w-3" />
-                    {promo.openRate}% open rate
-                  </span>
-                )}
-                <span className="text-zinc-600">by {promo.createdBy}</span>
-              </div>
-            </div>
-
-            {/* Expand for Spanish version */}
-            {promo.titleEs && (
-              <>
-                <button
-                  onClick={() =>
-                    setExpandedId(expandedId === promo.id ? null : promo.id)
-                  }
-                  className="flex w-full items-center justify-center gap-1 border-t border-emerald-900/20 py-2 text-[11px] font-medium text-zinc-500 transition-colors hover:bg-emerald-950/20 hover:text-zinc-300"
-                >
-                  <span className="rounded bg-[#D4AF37]/20 px-1 py-0.5 text-[9px] font-bold text-[#D4AF37]">
-                    ES
-                  </span>
-                  Ver en Español
-                  <ChevronDown
-                    className={cn(
-                      "h-3 w-3 transition-transform",
-                      expandedId === promo.id && "rotate-180"
+              {/* Expand for Spanish version */}
+              {promo.titleEs && (
+                <>
+                  <button
+                    onClick={() =>
+                      setExpandedId(
+                        expandedId === promo.id ? null : promo.id
+                      )
+                    }
+                    className="flex w-full items-center justify-center gap-1 border-t border-emerald-900/20 py-2 text-[11px] font-medium text-zinc-500 transition-colors hover:bg-emerald-950/20 hover:text-zinc-300"
+                  >
+                    <span className="rounded bg-[#D4AF37]/20 px-1 py-0.5 text-[9px] font-bold text-[#D4AF37]">
+                      ES
+                    </span>
+                    Ver en Espa\u00f1ol
+                    <ChevronDown
+                      className={cn(
+                        "h-3 w-3 transition-transform",
+                        expandedId === promo.id && "rotate-180"
+                      )}
+                    />
+                  </button>
+                  <AnimatePresence>
+                    {expandedId === promo.id && (
+                      <motion.div
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: "auto", opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        className="overflow-hidden"
+                      >
+                        <div className="border-t border-emerald-900/20 bg-[#D4AF37]/5 px-5 py-3">
+                          <p className="text-sm font-semibold text-[#D4AF37]">
+                            {promo.titleEs}
+                          </p>
+                          <p className="mt-1 text-xs text-zinc-400">
+                            {promo.bodyEs}
+                          </p>
+                        </div>
+                      </motion.div>
                     )}
-                  />
-                </button>
-                <AnimatePresence>
-                  {expandedId === promo.id && (
-                    <motion.div
-                      initial={{ height: 0, opacity: 0 }}
-                      animate={{ height: "auto", opacity: 1 }}
-                      exit={{ height: 0, opacity: 0 }}
-                      className="overflow-hidden"
-                    >
-                      <div className="border-t border-emerald-900/20 bg-[#D4AF37]/5 px-5 py-3">
-                        <p className="text-sm font-semibold text-[#D4AF37]">
-                          {promo.titleEs}
-                        </p>
-                        <p className="mt-1 text-xs text-zinc-400">
-                          {promo.bodyEs}
-                        </p>
-                      </div>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-              </>
-            )}
-          </motion.div>
-        ))}
+                  </AnimatePresence>
+                </>
+              )}
+            </motion.div>
+          ))}
 
-        {promotions.length === 0 && (
-          <div className="flex flex-col items-center justify-center rounded-2xl border border-emerald-900/20 bg-[#111A11] py-16">
-            <Megaphone className="mb-3 h-10 w-10 text-zinc-700" />
-            <h3 className="text-lg font-semibold text-zinc-400">
-              No promotions yet
-            </h3>
-            <p className="mt-1 text-sm text-zinc-600">
-              Compose your first promotion to engage customers.
-            </p>
-          </div>
-        )}
-      </div>
+          {promotions.length === 0 && (
+            <div className="flex flex-col items-center justify-center rounded-2xl border border-emerald-900/20 bg-[#111A11] py-16">
+              <Megaphone className="mb-3 h-10 w-10 text-zinc-700" />
+              <h3 className="text-lg font-semibold text-zinc-400">
+                No promotions yet
+              </h3>
+              <p className="mt-1 text-sm text-zinc-600">
+                Compose your first promotion to engage customers.
+              </p>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* ─── Compose Modal ───────────────────────────────── */}
       <AnimatePresence>
         {showCompose && (
           <ComposePromotionForm
-            onClose={() => setShowCompose(false)}
+            onClose={() => {
+              if (!sending) setShowCompose(false);
+            }}
             onSend={handleSendPromotion}
+            sending={sending}
           />
         )}
       </AnimatePresence>

@@ -14,6 +14,7 @@ import {
   Beaker,
   Scale,
   Info,
+  Heart,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { formatPrice } from "@/lib/utils";
@@ -21,6 +22,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useCartContext } from "@/context/CartContext";
 import { useToast } from "@/components/ui/use-toast";
+import { useFavorites } from "@/context/FavoritesContext";
+import { useSession } from "next-auth/react";
 import FadeIn from "./FadeIn";
 
 interface Review {
@@ -82,6 +85,21 @@ export default function ProductDetailClient({
   const [quantity, setQuantity] = useState(1);
   const { addItem } = useCartContext();
   const { toast } = useToast();
+  const { isFavorited, toggleFavorite } = useFavorites();
+  const { data: session } = useSession();
+
+  const isCustomer =
+    (session?.user as { id?: string; role?: string })?.role === "CUSTOMER";
+  const isLoggedIn = !!session?.user;
+
+  // Review form state
+  const [reviewRating, setReviewRating] = useState(0);
+  const [reviewHover, setReviewHover] = useState(0);
+  const [reviewBody, setReviewBody] = useState("");
+  const [reviewSubmitting, setReviewSubmitting] = useState(false);
+  const [localReviews, setLocalReviews] = useState<Review[]>(product.reviews);
+
+  const favorited = isFavorited(product.id);
 
   const handleAddToOrder = () => {
     if (!product.inStock) return;
@@ -92,6 +110,85 @@ export default function ProductDetailClient({
       variant: "success",
     });
     setQuantity(1);
+  };
+
+  const handleToggleFavorite = async () => {
+    await toggleFavorite(product.id);
+    toast({
+      title: favorited ? "Removed from favorites" : "Added to favorites",
+      description: favorited
+        ? `${product.name} was removed from your favorites.`
+        : `${product.name} was added to your favorites.`,
+      variant: "success",
+    });
+  };
+
+  const handleReviewSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (reviewRating === 0) {
+      toast({
+        title: "Rating required",
+        description: "Please select a star rating before submitting.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setReviewSubmitting(true);
+    try {
+      const res = await fetch("/api/reviews", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          productId: product.id,
+          rating: reviewRating,
+          body: reviewBody.trim() || undefined,
+        }),
+      });
+
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || "Failed to submit review");
+      }
+
+      const newReview: Review = await res.json();
+
+      // Optimistically add the review with the session user's name
+      const optimisticReview: Review = {
+        ...newReview,
+        customer: session?.user?.name
+          ? { name: session.user.name }
+          : null,
+      };
+
+      setLocalReviews((prev) => {
+        // If the API returned an updated existing review, replace it
+        const exists = prev.find((r) => r.id === optimisticReview.id);
+        if (exists) {
+          return prev.map((r) =>
+            r.id === optimisticReview.id ? optimisticReview : r
+          );
+        }
+        return [optimisticReview, ...prev];
+      });
+
+      setReviewRating(0);
+      setReviewBody("");
+
+      toast({
+        title: "Review submitted",
+        description: "Thank you for your feedback!",
+        variant: "success",
+      });
+    } catch (err: any) {
+      toast({
+        title: "Could not submit review",
+        description: err?.message || "Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setReviewSubmitting(false);
+    }
   };
 
   return (
@@ -175,10 +272,35 @@ export default function ProductDetailClient({
                 )}
               </div>
 
-              {/* Name */}
-              <h1 className="mt-2 text-2xl font-bold text-white sm:text-3xl">
-                {product.name}
-              </h1>
+              {/* Name + Favorite button */}
+              <div className="mt-2 flex items-start justify-between gap-3">
+                <h1 className="text-2xl font-bold text-white sm:text-3xl">
+                  {product.name}
+                </h1>
+                {isCustomer && (
+                  <button
+                    onClick={handleToggleFavorite}
+                    aria-label={
+                      favorited
+                        ? "Remove from favorites"
+                        : "Add to favorites"
+                    }
+                    className={cn(
+                      "flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-full border transition-all",
+                      favorited
+                        ? "border-rose-700/50 bg-rose-950/40 text-rose-400 hover:bg-rose-950/60"
+                        : "border-zinc-700/40 bg-zinc-900/40 text-zinc-500 hover:border-rose-700/40 hover:text-rose-400"
+                    )}
+                  >
+                    <Heart
+                      className={cn(
+                        "h-5 w-5 transition-all",
+                        favorited && "fill-rose-400"
+                      )}
+                    />
+                  </button>
+                )}
+              </div>
 
               {/* Rating */}
               {product.avgRating > 0 && (
@@ -265,8 +387,8 @@ export default function ProductDetailClient({
                 </div>
               )}
 
-              {/* Quantity + Add to order */}
-              <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:items-center">
+              {/* Quantity + Add to order (desktop/inline version) */}
+              <div className="mt-8 hidden sm:flex flex-col gap-3 sm:flex-row sm:items-center">
                 {/* Quantity selector */}
                 <div className="flex items-center rounded-lg border border-emerald-800/30 bg-[#111A11]">
                   <button
@@ -311,14 +433,16 @@ export default function ProductDetailClient({
         </div>
 
         {/* Reviews section */}
-        {product.reviews.length > 0 && (
-          <FadeIn delay={0.2}>
-            <section className="mt-12">
-              <h2 className="mb-6 text-xl font-bold text-white">
-                Customer Reviews
-              </h2>
+        <FadeIn delay={0.2}>
+          <section className="mt-12">
+            <h2 className="mb-6 text-xl font-bold text-white">
+              Customer Reviews
+            </h2>
+
+            {/* Existing reviews */}
+            {localReviews.length > 0 ? (
               <div className="space-y-4">
-                {product.reviews.map((review) => (
+                {localReviews.map((review) => (
                   <div
                     key={review.id}
                     className="rounded-xl border border-emerald-900/30 bg-[#111A11] p-4"
@@ -354,9 +478,108 @@ export default function ProductDetailClient({
                   </div>
                 ))}
               </div>
-            </section>
-          </FadeIn>
-        )}
+            ) : (
+              <p className="text-sm text-zinc-500">
+                No reviews yet. Be the first to leave one below.
+              </p>
+            )}
+
+            {/* Write a Review form / Sign-in prompt */}
+            <div className="mt-8">
+              <h3 className="mb-4 text-base font-semibold text-white">
+                Write a Review
+              </h3>
+
+              {isLoggedIn ? (
+                <form
+                  onSubmit={handleReviewSubmit}
+                  className="rounded-xl border border-emerald-900/30 bg-[#111A11] p-5 space-y-5"
+                >
+                  {/* Star rating selector */}
+                  <div>
+                    <label className="mb-2 block text-xs font-semibold uppercase tracking-wider text-zinc-400">
+                      Rating
+                    </label>
+                    <div className="flex items-center gap-1">
+                      {Array.from({ length: 5 }).map((_, i) => {
+                        const starValue = i + 1;
+                        const filled =
+                          starValue <= (reviewHover || reviewRating);
+                        return (
+                          <button
+                            key={i}
+                            type="button"
+                            aria-label={`Rate ${starValue} star${starValue !== 1 ? "s" : ""}`}
+                            onClick={() => setReviewRating(starValue)}
+                            onMouseEnter={() => setReviewHover(starValue)}
+                            onMouseLeave={() => setReviewHover(0)}
+                            className="flex h-11 w-11 items-center justify-center rounded-lg transition-colors hover:bg-zinc-800/60"
+                          >
+                            <Star
+                              className={cn(
+                                "h-6 w-6 transition-all",
+                                filled
+                                  ? "fill-amber-400 text-amber-400"
+                                  : "fill-zinc-700 text-zinc-600"
+                              )}
+                            />
+                          </button>
+                        );
+                      })}
+                      {reviewRating > 0 && (
+                        <span className="ml-2 text-sm text-zinc-400">
+                          {reviewRating} / 5
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Review body */}
+                  <div>
+                    <label
+                      htmlFor="review-body"
+                      className="mb-2 block text-xs font-semibold uppercase tracking-wider text-zinc-400"
+                    >
+                      Your Review{" "}
+                      <span className="normal-case text-zinc-600">
+                        (optional)
+                      </span>
+                    </label>
+                    <textarea
+                      id="review-body"
+                      value={reviewBody}
+                      onChange={(e) => setReviewBody(e.target.value)}
+                      rows={3}
+                      placeholder="Share your experience with this product..."
+                      className="w-full resize-none rounded-lg border border-emerald-900/30 bg-[#0D150D] px-3 py-2.5 text-sm text-zinc-200 placeholder:text-zinc-600 focus:border-emerald-700/50 focus:outline-none focus:ring-1 focus:ring-emerald-700/50"
+                    />
+                  </div>
+
+                  {/* Submit button */}
+                  <Button
+                    type="submit"
+                    disabled={reviewSubmitting || reviewRating === 0}
+                    className="h-11 w-full sm:w-auto sm:px-8"
+                  >
+                    {reviewSubmitting ? "Submitting..." : "Submit Review"}
+                  </Button>
+                </form>
+              ) : (
+                <div className="rounded-xl border border-emerald-900/30 bg-[#111A11] p-5 text-center">
+                  <p className="text-sm text-zinc-400">
+                    <Link
+                      href="/auth/signin"
+                      className="font-semibold text-emerald-400 hover:text-emerald-300 underline underline-offset-2"
+                    >
+                      Sign in
+                    </Link>{" "}
+                    to leave a review.
+                  </p>
+                </div>
+              )}
+            </div>
+          </section>
+        </FadeIn>
 
         {/* AI Recommendations */}
         {recommendations.length > 0 && (
@@ -405,6 +628,51 @@ export default function ProductDetailClient({
           </FadeIn>
         )}
       </div>
+
+      {/* Mobile sticky add-to-cart bar */}
+      <div className="fixed bottom-16 left-0 right-0 z-40 border-t border-emerald-900/30 bg-[#090F09]/95 backdrop-blur-md sm:hidden pb-safe">
+        <div className="flex items-center gap-3 px-4 py-3">
+          {/* Product info */}
+          <div className="flex-1 min-w-0">
+            <p className="truncate text-sm font-semibold text-white">{product.name}</p>
+            <p className="text-sm font-bold text-emerald-400">{formatPrice(product.price)}</p>
+          </div>
+
+          {/* Quantity selector - touch friendly 44px targets */}
+          <div className="flex items-center rounded-lg border border-emerald-800/30 bg-[#111A11]">
+            <button
+              onClick={() => setQuantity(Math.max(1, quantity - 1))}
+              className="flex h-11 w-11 items-center justify-center text-zinc-400 transition-colors hover:text-white disabled:opacity-50"
+              disabled={quantity <= 1}
+            >
+              <Minus className="h-4 w-4" />
+            </button>
+            <span className="flex h-11 w-10 items-center justify-center border-x border-emerald-800/30 text-sm font-semibold text-white">
+              {quantity}
+            </span>
+            <button
+              onClick={() => setQuantity(quantity + 1)}
+              className="flex h-11 w-11 items-center justify-center text-zinc-400 transition-colors hover:text-white"
+            >
+              <Plus className="h-4 w-4" />
+            </button>
+          </div>
+
+          {/* Add button */}
+          <Button
+            size="lg"
+            disabled={!product.inStock}
+            onClick={handleAddToOrder}
+            className="h-11 gap-1.5 btn-gold px-4"
+          >
+            <ShoppingCart className="h-4 w-4" />
+            Add
+          </Button>
+        </div>
+      </div>
+
+      {/* Spacer for mobile sticky bar */}
+      <div className="h-24 sm:hidden" />
     </div>
   );
 }

@@ -40,9 +40,9 @@ interface AdminSidebarProps {
   onSignOut?: () => void;
 }
 
-/** Returns true if the role has full admin access */
+/** Returns true if the role has admin access (OWNER or MANAGER) */
 export function isAdminRole(role: string): boolean {
-  return role === "OWNER";
+  return role === "OWNER" || role === "MANAGER";
 }
 
 // ─── Navigation Items ────────────────────────────────────
