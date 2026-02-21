@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { motion } from "framer-motion";
 import {
   User,
   Package,
@@ -10,9 +9,6 @@ import {
   Award,
   ChevronRight,
   LogOut,
-  Clock,
-  Star,
-  Leaf,
   Settings,
   ShieldCheck,
   Loader2,
@@ -28,7 +24,6 @@ import {
   calculateLoyaltyTier,
 } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import FadeIn from "@/components/customer/FadeIn";
 
 interface OrderHistoryItem {

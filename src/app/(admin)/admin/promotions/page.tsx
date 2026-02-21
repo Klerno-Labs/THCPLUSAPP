@@ -135,7 +135,7 @@ function ComposePromotionForm({ onClose, onSend }: ComposeFormProps) {
     scheduledDate: "",
     scheduledTime: "",
   });
-  const [preview, setPreview] = useState(false);
+  const [_preview, _setPreview] = useState(false);
 
   const selectedAudience = AUDIENCE_OPTIONS.find((a) => a.value === form.audience);
 

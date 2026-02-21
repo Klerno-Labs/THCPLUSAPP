@@ -3,6 +3,8 @@ import { prisma } from "@/lib/db";
 import { put } from "@vercel/blob";
 import { formatDate, formatTime, formatPrice, getOrderStatusLabel } from "@/lib/utils";
 
+export const dynamic = "force-dynamic";
+
 // ─── GET: Export Orders as CSV or PDF ───────────────────
 export async function GET(request: NextRequest) {
   try {

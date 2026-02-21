@@ -21,7 +21,8 @@ import { Input } from "@/components/ui/input";
 type ExportFormat = "csv" | "pdf";
 type ExportType = "orders" | "customers" | "analytics";
 
-interface ExportJob {
+// Used when real export jobs are tracked
+interface _ExportJob {
   id: string;
   type: ExportType;
   format: ExportFormat;

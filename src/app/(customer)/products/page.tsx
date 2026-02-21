@@ -2,6 +2,8 @@ import { db } from "@/lib/db";
 import { MOCK_PRODUCTS, MOCK_CATEGORIES } from "@/lib/mock-data";
 import ProductsGrid from "@/components/customer/ProductsGrid";
 
+export const dynamic = "force-dynamic";
+
 interface ProductsPageProps {
   searchParams: { category?: string };
 }

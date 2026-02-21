@@ -4,7 +4,6 @@ import React, { useState, useMemo, useCallback, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Trophy,
-  Clock,
   Download,
   Plus,
   X,

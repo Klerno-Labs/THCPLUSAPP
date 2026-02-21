@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { openai, ANALYTICS_INSIGHTS_PROMPT } from "@/lib/openai";
 
+export const dynamic = "force-dynamic";
+
 // ─── GET: Generate AI Analytics Insights (Nightly Cron) ─
 export async function GET(request: NextRequest) {
   try {

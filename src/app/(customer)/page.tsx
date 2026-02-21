@@ -1,6 +1,8 @@
 import { db } from "@/lib/db";
 import { MOCK_PRODUCTS, MOCK_CATEGORIES, MOCK_BANNERS } from "@/lib/mock-data";
 import HomeHero from "@/components/customer/HomeHero";
+
+export const dynamic = "force-dynamic";
 import FeaturedProducts from "@/components/customer/FeaturedProducts";
 import CategoryGrid from "@/components/customer/CategoryGrid";
 import AiBudtenderCTA from "@/components/customer/AiBudtenderCTA";

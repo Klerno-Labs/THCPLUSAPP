@@ -32,7 +32,6 @@ import {
   Legend,
 } from "recharts";
 import { cn } from "@/lib/utils";
-import { Button } from "@/components/ui/button";
 
 // ─── Types ───────────────────────────────────────────────
 type TimeRange = "daily" | "weekly" | "monthly";

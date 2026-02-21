@@ -3,6 +3,8 @@ import { prisma } from "@/lib/db";
 import { calculateLoyaltyTier } from "@/lib/utils";
 import type { LoyaltyTier } from "@prisma/client";
 
+export const dynamic = "force-dynamic";
+
 // ─── GET: Recalculate Loyalty Tiers (Vercel Cron) ───────
 export async function GET(request: NextRequest) {
   try {
