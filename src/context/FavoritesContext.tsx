@@ -47,10 +47,10 @@ export function FavoritesProvider({ children }: { children: React.ReactNode }) {
 
   const toggleFavorite = useCallback(
     async (productId: string) => {
-      const wasFavorited = favoriteIds.has(productId);
-
-      // Optimistic update
+      // Read current state via functional update to avoid stale closure
+      let wasFavorited = false;
       setFavoriteIds((prev) => {
+        wasFavorited = prev.has(productId);
         const next = new Set(prev);
         if (wasFavorited) {
           next.delete(productId);
@@ -92,7 +92,7 @@ export function FavoritesProvider({ children }: { children: React.ReactNode }) {
         });
       }
     },
-    [favoriteIds]
+    []
   );
 
   return (

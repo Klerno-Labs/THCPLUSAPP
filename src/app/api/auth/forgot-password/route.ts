@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { randomInt } from "crypto";
 import { prisma } from "@/lib/db";
 import { sendSms } from "@/lib/twilio";
 
@@ -34,7 +35,7 @@ export async function POST(request: NextRequest) {
 
     if (profile) {
       // Generate a 6-digit numeric code
-      const code = Math.floor(100000 + Math.random() * 900000).toString();
+      const code = randomInt(100000, 999999).toString();
 
       // Try to store in Vercel KV with 10-minute TTL
       let stored = false;

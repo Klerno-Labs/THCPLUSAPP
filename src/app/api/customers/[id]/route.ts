@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
+import { calculateLoyaltyTier } from "@/lib/utils";
+import { LoyaltyTier } from "@prisma/client";
 
 export const dynamic = "force-dynamic";
 
@@ -39,14 +41,12 @@ export async function PATCH(
       });
     }
 
-    // Adjust loyalty points
+    // Adjust loyalty points atomically
     if (loyaltyAdjustment && typeof loyaltyAdjustment === "number") {
-      const newPoints = Math.max(0, customer.loyaltyPoints + loyaltyAdjustment);
-
       await prisma.$transaction([
         prisma.profile.update({
           where: { id: params.id },
-          data: { loyaltyPoints: newPoints },
+          data: { loyaltyPoints: { increment: loyaltyAdjustment } },
         }),
         prisma.loyaltyTransaction.create({
           data: {
@@ -59,6 +59,26 @@ export async function PATCH(
           },
         }),
       ]);
+
+      // Clamp loyalty points to 0 minimum
+      const updated = await prisma.profile.findUnique({ where: { id: params.id }, select: { loyaltyPoints: true } });
+      if (updated && updated.loyaltyPoints < 0) {
+        await prisma.profile.update({ where: { id: params.id }, data: { loyaltyPoints: 0 } });
+      }
+    }
+
+    // Re-read the updated profile to get current points and calculate tier
+    const updatedProfile = await prisma.profile.findUnique({
+      where: { id: params.id },
+      select: { loyaltyPoints: true },
+    });
+
+    if (updatedProfile) {
+      const newTier = calculateLoyaltyTier(updatedProfile.loyaltyPoints);
+      await prisma.profile.update({
+        where: { id: params.id },
+        data: { loyaltyTier: newTier as LoyaltyTier },
+      });
     }
 
     // Return updated customer

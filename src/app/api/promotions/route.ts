@@ -83,9 +83,13 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    if (!session.user.email) {
+      return NextResponse.json({ error: "Session error" }, { status: 400 });
+    }
+
     // Find the staff user ID from the session
     const staffUser = await prisma.staffUser.findFirst({
-      where: { email: session.user.email! },
+      where: { email: session.user.email },
       select: { id: true },
     });
 

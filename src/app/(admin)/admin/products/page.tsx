@@ -497,6 +497,7 @@ export default function ProductManagementPage() {
       setSortField(field);
       setSortDirection("asc");
     }
+    setCurrentPage(1);
   };
 
   const handleToggleStock = useCallback(async (productId: string, currentInStock: boolean) => {

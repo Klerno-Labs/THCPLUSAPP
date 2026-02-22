@@ -93,6 +93,11 @@ function CreateDealForm({
 
   const selectedProduct = products.find((p) => p.id === form.productId);
 
+  const toISO = (date: string, time: string) => {
+    const d = new Date(`${date}T${time || "00:00"}`);
+    return d.toISOString();
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -100,8 +105,8 @@ function CreateDealForm({
       return;
     }
 
-    const startsAt = `${form.startDate}T${form.startTime || "00:00"}:00`;
-    const endsAt = `${form.endDate}T${form.endTime || "23:59"}:00`;
+    const startsAt = toISO(form.startDate, form.startTime || "00:00");
+    const endsAt = toISO(form.endDate, form.endTime || "23:59");
 
     await onSubmit({
       productId: form.productId,

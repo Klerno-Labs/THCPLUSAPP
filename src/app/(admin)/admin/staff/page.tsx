@@ -85,8 +85,8 @@ function AddStaffModal({ onClose, onAdd }: AddStaffModalProps) {
       setError("Please enter a valid email address.");
       return;
     }
-    if (form.password.length < 4) {
-      setError("Password must be at least 4 characters.");
+    if (form.password.length < 8) {
+      setError("Password must be at least 8 characters");
       return;
     }
 
@@ -177,7 +177,7 @@ function AddStaffModal({ onClose, onAdd }: AddStaffModalProps) {
                 type={showPassword ? "text" : "password"}
                 value={form.password}
                 onChange={(e) => setForm({ ...form, password: e.target.value })}
-                placeholder="Min. 4 characters"
+                placeholder="Min. 8 characters"
                 className="pl-10 pr-10"
                 required
               />

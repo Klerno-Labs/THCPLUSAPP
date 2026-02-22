@@ -21,13 +21,18 @@ export async function GET(
   { params }: RouteContext
 ) {
   try {
+    const session = await auth();
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
     const { id } = params;
 
     const order = await prisma.order.findUnique({
       where: { id },
       include: {
         items: { include: { product: true } },
-        customer: true,
+        customer: { select: { id: true, name: true, phone: true, loyaltyTier: true } },
         guestSession: true,
         statusHistory: {
           orderBy: { createdAt: "desc" },
@@ -40,6 +45,12 @@ export async function GET(
         { error: "Order not found" },
         { status: 404 }
       );
+    }
+
+    // Staff can access any order; customers can only access their own
+    const isStaff = ["OWNER", "MANAGER", "STAFF"].includes((session.user as any).role);
+    if (!isStaff && order.customerId !== session.user.id) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
     return NextResponse.json(order);
@@ -95,6 +106,25 @@ export async function PATCH(
 
     const previousStatus = currentOrder.status;
 
+    // Validate status transition
+    const VALID_TRANSITIONS: Record<string, string[]> = {
+      PENDING: ["CONFIRMED", "CANCELLED"],
+      CONFIRMED: ["PREPARING", "CANCELLED"],
+      PREPARING: ["READY", "CANCELLED"],
+      READY: ["PICKED_UP", "CANCELLED"],
+      PICKED_UP: [],
+      CANCELLED: [],
+      EXPIRED: [],
+    };
+
+    const allowedNext = VALID_TRANSITIONS[previousStatus] || [];
+    if (!allowedNext.includes(status)) {
+      return NextResponse.json(
+        { error: "Invalid status transition" },
+        { status: 400 }
+      );
+    }
+
     // Build update data with relevant timestamps
     const updateData: Record<string, unknown> = {
       status,
@@ -106,7 +136,11 @@ export async function PATCH(
     }
 
     if (estimatedReadyTime) {
-      updateData.estimatedReadyTime = new Date(estimatedReadyTime);
+      const d = new Date(estimatedReadyTime);
+      if (isNaN(d.getTime())) {
+        return NextResponse.json({ error: "Invalid estimatedReadyTime date" }, { status: 400 });
+      }
+      updateData.estimatedReadyTime = d;
     }
 
     switch (status) {

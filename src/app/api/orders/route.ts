@@ -98,23 +98,26 @@ export async function POST(request: NextRequest) {
           totalItems,
           expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000), // 24 hours
           items: {
-            create: items.map((item) => {
-              const product = productMap.get(item.productId)!;
-              return {
-                productId: item.productId,
-                quantity: item.quantity,
-                unitPriceAtOrder: product.price,
-                productSnapshot: {
-                  name: product.name,
-                  price: product.price,
-                  thcPercentage: product.thcPercentage,
-                  cbdPercentage: product.cbdPercentage,
-                  strainType: product.strainType,
-                  weight: product.weight,
-                  imageUrl: product.imageUrl,
-                },
-              };
-            }),
+            create: items
+              .map((item) => {
+                const product = productMap.get(item.productId);
+                if (!product) return null; // validated above
+                return {
+                  productId: item.productId,
+                  quantity: item.quantity,
+                  unitPriceAtOrder: product.price,
+                  productSnapshot: {
+                    name: product.name,
+                    price: product.price,
+                    thcPercentage: product.thcPercentage,
+                    cbdPercentage: product.cbdPercentage,
+                    strainType: product.strainType,
+                    weight: product.weight,
+                    imageUrl: product.imageUrl,
+                  },
+                };
+              })
+              .filter(Boolean) as any[],
           },
         },
         include: {

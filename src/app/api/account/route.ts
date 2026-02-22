@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
+import { updateProfileSchema } from "@/lib/validations";
 
 export const dynamic = "force-dynamic";
 
@@ -110,7 +111,14 @@ export async function PATCH(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { name, email, preferredLanguage } = body;
+
+    const parsed = updateProfileSchema.safeParse(body);
+    if (!parsed.success) {
+      const firstError = parsed.error.issues[0]?.message || "Invalid input";
+      return NextResponse.json({ error: firstError }, { status: 400 });
+    }
+
+    const { name, email, preferredLanguage } = parsed.data;
 
     const updateData: Record<string, string | null> = {};
     if (name !== undefined) updateData.name = name;
@@ -124,7 +132,13 @@ export async function PATCH(request: NextRequest) {
     });
 
     return NextResponse.json({ success: true });
-  } catch (error) {
+  } catch (error: any) {
+    if (error?.code === "P2002") {
+      return NextResponse.json(
+        { error: "Email already in use" },
+        { status: 409 }
+      );
+    }
     console.error("PATCH /api/account error:", error);
     return NextResponse.json(
       { error: "Failed to update profile" },

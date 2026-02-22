@@ -207,7 +207,13 @@ export async function POST(request: NextRequest) {
       message: `Referral applied! You and ${referrer.name} each earned ${POINTS_AWARDED} bonus points.`,
       pointsAwarded: POINTS_AWARDED,
     });
-  } catch (error) {
+  } catch (error: any) {
+    if (error?.code === "P2002") {
+      return NextResponse.json(
+        { error: "You have already used a referral code" },
+        { status: 400 }
+      );
+    }
     console.error("POST /api/referrals error:", error);
     return NextResponse.json(
       { error: "Failed to apply referral code" },

@@ -26,6 +26,7 @@ import {
   getOrderStatusColor,
   getLoyaltyTierLabel,
   getLoyaltyTierClass,
+  getLoyaltyTierThreshold,
   calculateLoyaltyTier,
 } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -256,18 +257,31 @@ export default function AccountPage() {
 
             {/* Progress bar to next tier */}
             <div className="mt-4">
-              <div className="flex justify-between text-[10px] text-zinc-500">
-                <span>Current Tier</span>
-                <span>Next Tier</span>
-              </div>
-              <div className="mt-1 h-1.5 rounded-full bg-zinc-800">
-                <div
-                  className="h-full rounded-full bg-gradient-to-r from-emerald-500 to-[#D4AF37]"
-                  style={{
-                    width: `${Math.min(100, (loyaltyPoints % 100))}%`,
-                  }}
-                />
-              </div>
+              {(() => {
+                const currentThreshold = getLoyaltyTierThreshold(loyaltyTier);
+                const tiers = ["SEEDLING", "GROWER", "CULTIVATOR", "MASTER_GROWER"];
+                const currentIdx = tiers.indexOf(loyaltyTier);
+                const nextTier = currentIdx < tiers.length - 1 ? tiers[currentIdx + 1] : null;
+                const nextThreshold = nextTier ? getLoyaltyTierThreshold(nextTier) : currentThreshold;
+                const range = nextThreshold - currentThreshold;
+                const progress = range > 0 ? ((loyaltyPoints - currentThreshold) / range) * 100 : 100;
+                return (
+                  <>
+                    <div className="flex justify-between text-[10px] text-zinc-500">
+                      <span>{getLoyaltyTierLabel(loyaltyTier)}</span>
+                      <span>{nextTier ? getLoyaltyTierLabel(nextTier) : "Max Tier"}</span>
+                    </div>
+                    <div className="mt-1 h-1.5 rounded-full bg-zinc-800">
+                      <div
+                        className="h-full rounded-full bg-gradient-to-r from-emerald-500 to-[#D4AF37]"
+                        style={{
+                          width: `${Math.min(100, progress)}%`,
+                        }}
+                      />
+                    </div>
+                  </>
+                );
+              })()}
             </div>
           </div>
         </FadeIn>

@@ -8,11 +8,15 @@ const LANG_KEY = "thcplus-lang";
 
 export function LanguageToggle({ className }: { className?: string }) {
   const [lang, setLang] = useState("en");
+  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
     const saved = localStorage.getItem(LANG_KEY);
     if (saved) setLang(saved);
+    setMounted(true);
   }, []);
+
+  if (!mounted) return null;
 
   const toggle = () => {
     const next = lang === "en" ? "es" : "en";

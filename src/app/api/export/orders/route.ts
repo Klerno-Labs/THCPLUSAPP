@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { put } from "@vercel/blob";
 import { formatDate, formatTime, formatPrice, getOrderStatusLabel } from "@/lib/utils";
@@ -8,6 +9,14 @@ export const dynamic = "force-dynamic";
 // ─── GET: Export Orders as CSV or PDF ───────────────────
 export async function GET(request: NextRequest) {
   try {
+    const session = await auth();
+    if (
+      !session?.user ||
+      !["OWNER", "MANAGER"].includes((session.user as any).role)
+    ) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
     const { searchParams } = new URL(request.url);
     const startDate = searchParams.get("startDate");
     const endDate = searchParams.get("endDate");
@@ -388,18 +397,10 @@ async function generatePdfResponse(
 
     // Upload to Vercel Blob
     const filename = `exports/orders-report-${new Date().toISOString().split("T")[0]}-${Date.now()}.pdf`;
-    let blob;
-    try {
-      blob = await put(filename, pdfBuffer, {
-        access: "public",
-        contentType: "application/pdf",
-      });
-    } catch {
-      blob = await put(filename, pdfBuffer, {
-        access: "private",
-        contentType: "application/pdf",
-      });
-    }
+    const blob = await put(filename, pdfBuffer, {
+      access: "private",
+      contentType: "application/pdf",
+    });
 
     return NextResponse.json({
       url: blob.url,

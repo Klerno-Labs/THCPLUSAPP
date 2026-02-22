@@ -1,4 +1,5 @@
 import { NextRequest } from "next/server";
+import { auth } from "@/lib/auth";
 import { openai, BUDTENDER_SYSTEM_PROMPT } from "@/lib/openai";
 import { prisma } from "@/lib/db";
 import { chatMessageSchema } from "@/lib/validations";
@@ -6,8 +7,12 @@ import { chatMessageSchema } from "@/lib/validations";
 export const dynamic = "force-dynamic";
 
 // ─── POST: AI Chat (Streaming) ──────────────────────────
+// Rate limiting should be applied via middleware or edge config
 export async function POST(request: NextRequest) {
   try {
+    // Allow anonymous chat but derive customerId from session if authenticated
+    const session = await auth();
+
     const body = await request.json();
     const parsed = chatMessageSchema.safeParse(body);
 
@@ -21,7 +26,10 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { message, customerId, sessionId, language } = parsed.data;
+    const { message, sessionId, language } = parsed.data;
+
+    // If authenticated, always use session user ID — ignore body's customerId to prevent spoofing
+    const customerId = session?.user?.id ?? parsed.data.customerId ?? null;
 
     // ── Fetch current product catalog ──
     const products = await prisma.product.findMany({
@@ -260,8 +268,6 @@ export async function POST(request: NextRequest) {
     return new Response(
       JSON.stringify({
         error: "Failed to process chat message",
-        detail: errMsg,
-        keyPresent: !!process.env.OPENAI_API_KEY,
       }),
       { status: 500, headers: { "Content-Type": "application/json" } }
     );

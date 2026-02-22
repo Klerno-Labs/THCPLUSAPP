@@ -112,10 +112,10 @@ export default function OrderTrackingPage() {
       const data = await res.json();
       const items = (data.items || []).map((item: any) => ({
         ...item,
-        unitPriceAtOrder: Number(item.unitPriceAtOrderAtOrder || 0),
+        unitPriceAtOrder: Number(item.unitPriceAtOrder || 0),
       }));
       const totalAmount = items.reduce(
-        (sum: number, item: any) => sum + item.unitPriceAtOrderAtOrder * item.quantity,
+        (sum: number, item: any) => sum + item.unitPriceAtOrder * item.quantity,
         0
       );
       setOrder({

@@ -19,8 +19,8 @@ export async function PATCH(
     const { name, email, role, isActive } = body;
 
     const updateData: Record<string, unknown> = {};
-    if (name !== undefined) updateData.name = name.trim();
-    if (email !== undefined) updateData.email = email.trim().toLowerCase();
+    if (typeof name === "string") updateData.name = name.trim();
+    if (typeof email === "string") updateData.email = email.trim().toLowerCase();
     if (role !== undefined) {
       if (!["OWNER", "MANAGER", "STAFF"].includes(role)) {
         return NextResponse.json({ error: "Invalid role" }, { status: 400 });
@@ -48,6 +48,12 @@ export async function PATCH(
       return NextResponse.json(
         { error: "Staff member not found" },
         { status: 404 }
+      );
+    }
+    if (error?.code === "P2002") {
+      return NextResponse.json(
+        { error: "Email already in use" },
+        { status: 409 }
       );
     }
     console.error("Failed to update staff:", error);

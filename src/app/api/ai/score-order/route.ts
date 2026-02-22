@@ -20,11 +20,12 @@ interface ScoreOrderInput {
 // ─── POST: AI Order Priority Scoring ────────────────────
 export async function POST(request: NextRequest) {
   try {
-    // Allow staff or internal server-to-server calls
+    // Require staff authentication
     const session = await auth();
-    const isStaff = session?.user && ["OWNER", "MANAGER", "STAFF"].includes((session.user as any).role);
-    const isInternal = request.headers.get("x-internal-call") === "true";
-    if (!isStaff && !isInternal) {
+    if (
+      !session?.user ||
+      !["OWNER", "MANAGER", "STAFF"].includes((session.user as any).role)
+    ) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
@@ -42,15 +43,15 @@ export async function POST(request: NextRequest) {
     const itemList = items
       .map(
         (i) =>
-          `- ${i.productName} x${i.quantity} ($${i.price.toFixed(2)} each)`
+          `- ${i.productName} x${Number(i.quantity || 0)} ($${Number(i.price || 0).toFixed(2)} each)`
       )
       .join("\n");
 
     const totalValue = items.reduce(
-      (sum, i) => sum + i.price * i.quantity,
+      (sum, i) => sum + Number(i.price || 0) * Number(i.quantity || 0),
       0
     );
-    const totalItemCount = items.reduce((sum, i) => sum + i.quantity, 0);
+    const totalItemCount = items.reduce((sum, i) => sum + Number(i.quantity || 0), 0);
 
     const now = new Date();
     const expiresDate = expiresAt ? new Date(expiresAt) : null;

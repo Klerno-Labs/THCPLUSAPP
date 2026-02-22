@@ -195,7 +195,10 @@ export default function AdminOrderQueuePage() {
   );
 
   const handleCancel = useCallback(
-    (orderId: string) => updateOrderStatus(orderId, "CANCELLED"),
+    (orderId: string) => {
+      if (!window.confirm("Are you sure you want to cancel this order? This cannot be undone.")) return;
+      updateOrderStatus(orderId, "CANCELLED");
+    },
     [updateOrderStatus]
   );
 

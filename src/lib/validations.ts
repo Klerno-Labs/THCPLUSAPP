@@ -27,7 +27,7 @@ export const productSchema = z.object({
   categoryId: z.string().min(1, "Category is required"),
   descriptionEn: z.string().max(2000).optional(),
   descriptionEs: z.string().max(2000).optional(),
-  price: z.number().min(0, "Price cannot be negative"),
+  price: z.number().min(0.01, "Price must be greater than 0"),
   thcPercentage: z.number().min(0).max(100).optional(),
   cbdPercentage: z.number().min(0).max(100).optional(),
   strainType: z.enum(["SATIVA", "INDICA", "HYBRID", "CBD"]).optional(),
@@ -158,7 +158,10 @@ export const dealSchema = z.object({
   badgeText: z.string().max(50).optional(),
   startsAt: z.string().datetime(),
   endsAt: z.string().datetime(),
-});
+}).refine(
+  (data) => new Date(data.endsAt) > new Date(data.startsAt),
+  { message: "End date must be after start date" }
+);
 
 export type DealInput = z.infer<typeof dealSchema>;
 

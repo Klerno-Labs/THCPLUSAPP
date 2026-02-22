@@ -73,8 +73,17 @@ export async function POST(request: NextRequest) {
     });
 
     return NextResponse.json({ success: true });
-  } catch (error) {
+  } catch (error: any) {
     console.error("POST /api/auth/signup error:", error);
+
+    // Handle Prisma unique constraint violation (race condition)
+    if (error?.code === "P2002") {
+      return NextResponse.json(
+        { error: "An account with this phone number or email already exists" },
+        { status: 409 }
+      );
+    }
+
     return NextResponse.json(
       { error: "Failed to create account" },
       { status: 500 }

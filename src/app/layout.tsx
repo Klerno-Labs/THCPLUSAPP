@@ -62,7 +62,7 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
-  maximumScale: 1,
+  maximumScale: 5,
   themeColor: "#090F09",
 };
 
@@ -91,18 +91,27 @@ export default function RootLayout({
                 addressCountry: "US",
               },
               priceRange: "$$",
-              openingHoursSpecification: {
-                "@type": "OpeningHoursSpecification",
-                dayOfWeek: [
-                  "Monday",
-                  "Tuesday",
-                  "Wednesday",
-                  "Thursday",
-                  "Friday",
-                  "Saturday",
-                  "Sunday",
-                ],
-              },
+              openingHoursSpecification: [
+                {
+                  "@type": "OpeningHoursSpecification",
+                  dayOfWeek: [
+                    "Monday",
+                    "Tuesday",
+                    "Wednesday",
+                    "Thursday",
+                    "Friday",
+                    "Saturday",
+                  ],
+                  opens: "10:00",
+                  closes: "21:00",
+                },
+                {
+                  "@type": "OpeningHoursSpecification",
+                  dayOfWeek: "Sunday",
+                  opens: "11:00",
+                  closes: "19:00",
+                },
+              ],
               potentialAction: {
                 "@type": "OrderAction",
                 target: "https://order.thcplus.com/products",

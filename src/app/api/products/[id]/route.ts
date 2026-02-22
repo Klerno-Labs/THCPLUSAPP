@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
+import { productSchema } from "@/lib/validations";
 
 export const dynamic = "force-dynamic";
 
@@ -60,6 +61,16 @@ export async function PATCH(
 
     const body = await request.json();
 
+    // Validate PATCH fields against partial product schema
+    const partialSchema = productSchema.partial();
+    const parsed = partialSchema.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: "Validation failed", details: parsed.error.flatten() },
+        { status: 400 }
+      );
+    }
+
     const existing = await prisma.product.findUnique({
       where: { id: params.id },
     });
@@ -67,7 +78,7 @@ export async function PATCH(
       return NextResponse.json({ error: "Product not found" }, { status: 404 });
     }
 
-    // Build update data from allowed fields
+    // Build update data from validated and allowed fields
     const allowed = [
       "name",
       "nameEs",
@@ -88,8 +99,8 @@ export async function PATCH(
 
     const updateData: Record<string, unknown> = {};
     for (const key of allowed) {
-      if (body[key] !== undefined) {
-        updateData[key] = body[key];
+      if (parsed.data[key as keyof typeof parsed.data] !== undefined) {
+        updateData[key] = parsed.data[key as keyof typeof parsed.data];
       }
     }
 
@@ -100,7 +111,13 @@ export async function PATCH(
     });
 
     return NextResponse.json(product);
-  } catch (error) {
+  } catch (error: any) {
+    if (error?.code === "P2025") {
+      return NextResponse.json(
+        { error: "Product not found" },
+        { status: 404 }
+      );
+    }
     console.error("PATCH /api/products/[id] error:", error);
     return NextResponse.json(
       { error: "Failed to update product" },
@@ -133,7 +150,13 @@ export async function DELETE(
     await prisma.product.delete({ where: { id: params.id } });
 
     return NextResponse.json({ success: true });
-  } catch (error) {
+  } catch (error: any) {
+    if (error?.code === "P2003") {
+      return NextResponse.json(
+        { error: "Cannot delete: product has associated orders, reviews, or deals. Remove those first." },
+        { status: 409 }
+      );
+    }
     console.error("DELETE /api/products/[id] error:", error);
     return NextResponse.json(
       { error: "Failed to delete product" },

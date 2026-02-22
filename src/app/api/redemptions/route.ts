@@ -107,9 +107,19 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // ── Create redemption in transaction ──
+    // ── Create redemption in transaction (atomic points check + deduction) ──
     const redemption = await prisma.$transaction(async (tx) => {
-      // Decrement loyalty points
+      // Re-fetch profile inside transaction to prevent race condition double-spend
+      const freshProfile = await tx.profile.findUnique({
+        where: { id: (session.user as any).id },
+        select: { loyaltyPoints: true },
+      });
+
+      if (!freshProfile || freshProfile.loyaltyPoints < reward.pointsCost) {
+        throw new Error("INSUFFICIENT_POINTS");
+      }
+
+      // Decrement loyalty points (safe: we just verified the balance inside the tx)
       await tx.profile.update({
         where: { id: (session.user as any).id },
         data: { loyaltyPoints: { decrement: reward.pointsCost } },
@@ -144,6 +154,13 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(redemption, { status: 201 });
   } catch (error) {
+    // Handle the atomic balance check failure gracefully
+    if (error instanceof Error && error.message === "INSUFFICIENT_POINTS") {
+      return NextResponse.json(
+        { error: "Insufficient loyalty points" },
+        { status: 400 }
+      );
+    }
     console.error("POST /api/redemptions error:", error);
     return NextResponse.json(
       { error: "Failed to redeem reward" },

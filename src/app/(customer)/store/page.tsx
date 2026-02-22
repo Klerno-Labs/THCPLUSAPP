@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import {
   ArrowLeft,
@@ -95,8 +95,12 @@ const fadeIn = {
 export default function StorePage() {
   const [lang, setLang] = useState<"en" | "es">("en");
   const [addressCopied, setAddressCopied] = useState(false);
+  const [isOpen, setIsOpen] = useState<boolean | null>(null);
   const t = translations[lang];
-  const isOpen = getIsOpen();
+
+  useEffect(() => {
+    setIsOpen(getIsOpen());
+  }, []);
 
   const handleCopyAddress = async () => {
     try {
@@ -134,37 +138,39 @@ export default function StorePage() {
 
       <div className="mx-auto max-w-3xl px-4 py-6 space-y-5">
         {/* Open/Closed Status Badge */}
-        <motion.div
-          custom={0}
-          variants={fadeIn}
-          initial="hidden"
-          animate="visible"
-          className="flex justify-center"
-        >
-          <div
-            className={cn(
-              "inline-flex items-center gap-2 rounded-full border px-4 py-2",
-              isOpen
-                ? "border-emerald-700/40 bg-emerald-950/30"
-                : "border-red-800/40 bg-red-950/20"
-            )}
+        {isOpen !== null && (
+          <motion.div
+            custom={0}
+            variants={fadeIn}
+            initial="hidden"
+            animate="visible"
+            className="flex justify-center"
           >
-            <span
+            <div
               className={cn(
-                "h-2.5 w-2.5 rounded-full",
-                isOpen ? "animate-pulse bg-emerald-400" : "bg-red-400"
-              )}
-            />
-            <span
-              className={cn(
-                "text-sm font-semibold",
-                isOpen ? "text-emerald-400" : "text-red-400"
+                "inline-flex items-center gap-2 rounded-full border px-4 py-2",
+                isOpen
+                  ? "border-emerald-700/40 bg-emerald-950/30"
+                  : "border-red-800/40 bg-red-950/20"
               )}
             >
-              {isOpen ? t.openNow : t.closedNow}
-            </span>
-          </div>
-        </motion.div>
+              <span
+                className={cn(
+                  "h-2.5 w-2.5 rounded-full",
+                  isOpen ? "animate-pulse bg-emerald-400" : "bg-red-400"
+                )}
+              />
+              <span
+                className={cn(
+                  "text-sm font-semibold",
+                  isOpen ? "text-emerald-400" : "text-red-400"
+                )}
+              >
+                {isOpen ? t.openNow : t.closedNow}
+              </span>
+            </div>
+          </motion.div>
+        )}
 
         {/* Address Card */}
         <motion.div

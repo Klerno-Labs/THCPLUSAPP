@@ -53,6 +53,15 @@ export default function AgeGate() {
     setIsDenied(true);
   };
 
+  useEffect(() => {
+    if (isDenied) {
+      const timer = setTimeout(() => {
+        window.location.href = "https://google.com";
+      }, 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [isDenied]);
+
   // Still loading from localStorage
   if (isVerified === null) {
     return (

@@ -119,7 +119,7 @@ function ComposePromotionForm({ onClose, onSend, sending }: ComposeFormProps) {
       targetAudience: form.audience,
       sendNow: form.sendNow,
       ...(!form.sendNow && form.scheduledDate && form.scheduledTime
-        ? { scheduledAt: `${form.scheduledDate}T${form.scheduledTime}:00Z` }
+        ? { scheduledAt: `${form.scheduledDate}T${form.scheduledTime}:00` }
         : {}),
     };
 

@@ -64,6 +64,24 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    // Validate dates
+    const startsAtDate = new Date(startsAt);
+    const endsAtDate = new Date(endsAt);
+
+    if (isNaN(startsAtDate.getTime()) || isNaN(endsAtDate.getTime())) {
+      return NextResponse.json(
+        { error: "Invalid date format for startsAt or endsAt" },
+        { status: 400 }
+      );
+    }
+
+    if (endsAtDate <= startsAtDate) {
+      return NextResponse.json(
+        { error: "End date must be after start date" },
+        { status: 400 }
+      );
+    }
+
     // Verify product exists
     const product = await prisma.product.findUnique({
       where: { id: productId },

@@ -144,8 +144,7 @@ export const PROFANITY_LIST = [
 ];
 
 export function containsProfanity(text: string): boolean {
-  const lower = text.toLowerCase();
-  return PROFANITY_LIST.some((word) => lower.includes(word));
+  return PROFANITY_LIST.some((word) => new RegExp(`\\b${word}\\b`, 'i').test(text));
 }
 
 export function filterProfanity(text: string): string {

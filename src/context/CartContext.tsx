@@ -1,10 +1,16 @@
 "use client";
 
-import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
+import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from "react";
 import type { CartItem, Cart } from "@/types/app.types";
 import type { Product } from "@prisma/client";
 
 const CART_KEY = "thcplus-cart";
+
+// NOTE: The cart stores full product objects (including prices) in localStorage.
+// If product prices change between when the user adds an item and when they check out,
+// the displayed cart prices may be stale. This is acceptable because the order creation
+// API (POST /api/orders) always uses server-side prices from the database, not the
+// client-supplied prices. The cart prices are for display purposes only.
 
 interface CartContextValue {
   cart: Cart;
@@ -87,32 +93,38 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     setItems([]);
   }, []);
 
-  const totalItems = items.reduce((sum, item) => sum + item.quantity, 0);
-
-  const totalPrice = items.reduce(
-    (sum, item) => sum + (item.product?.price ?? 0) * item.quantity,
-    0
+  const totalItems = useMemo(
+    () => items.reduce((sum, item) => sum + item.quantity, 0),
+    [items]
   );
 
-  const cart: Cart = {
-    items,
-    totalItems,
-  };
+  const totalPrice = useMemo(
+    () => items.reduce((sum, item) => sum + (item.product?.price ?? 0) * item.quantity, 0),
+    [items]
+  );
+
+  const cart: Cart = useMemo(
+    () => ({ items, totalItems }),
+    [items, totalItems]
+  );
+
+  const value = useMemo<CartContextValue>(
+    () => ({
+      cart,
+      items,
+      totalItems,
+      totalPrice,
+      isLoaded,
+      addItem,
+      removeItem,
+      updateQuantity,
+      clearCart,
+    }),
+    [cart, items, totalItems, totalPrice, isLoaded, addItem, removeItem, updateQuantity, clearCart]
+  );
 
   return (
-    <CartContext.Provider
-      value={{
-        cart,
-        items,
-        totalItems,
-        totalPrice,
-        isLoaded,
-        addItem,
-        removeItem,
-        updateQuantity,
-        clearCart,
-      }}
-    >
+    <CartContext.Provider value={value}>
       {children}
     </CartContext.Provider>
   );

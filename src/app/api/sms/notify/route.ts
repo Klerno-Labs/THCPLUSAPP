@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { auth } from "@/lib/auth";
 import { sendSms } from "@/lib/twilio";
 import { z } from "zod";
 
@@ -10,6 +11,14 @@ const smsNotifySchema = z.object({
 // ─── POST: Send SMS Notification ────────────────────────
 export async function POST(request: NextRequest) {
   try {
+    const session = await auth();
+    if (
+      !session?.user ||
+      !["OWNER", "MANAGER", "STAFF"].includes((session.user as any).role)
+    ) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
     const body = await request.json();
     const parsed = smsNotifySchema.safeParse(body);
 
