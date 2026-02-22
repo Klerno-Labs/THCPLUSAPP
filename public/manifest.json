@@ -3,6 +3,7 @@
   "short_name": "THC+ Order",
   "description": "Reserve premium THCA products for will-call pickup at THC Plus Houston. Browse, order, pick up.",
   "start_url": "/",
+  "scope": "/",
   "display": "standalone",
   "background_color": "#090F09",
   "theme_color": "#10B981",

@@ -71,6 +71,7 @@ model Profile {
   preferredLanguage   String               @default("en")
   loyaltyPoints       Int                  @default(0)
   loyaltyTier         LoyaltyTier          @default(SEEDLING)
+  referralCode        String?              @unique
   hashedPassword      String?
   staffNotes          String?              @db.Text
   createdAt           DateTime             @default(now())
@@ -81,9 +82,13 @@ model Profile {
   reviews             Review[]
   favorites           Favorite[]
   redemptions         Redemption[]
+  referralsMade       Referral[]           @relation("ReferralsMade")
+  referredBy          Referral?            @relation("ReferralsReceived")
+  stockAlerts         StockAlert[]
 
   @@index([phone])
   @@index([email])
+  @@index([referralCode])
 }
 
 // ─── Guest Session ───────────────────────────────────────
@@ -128,6 +133,8 @@ model Product {
   orderItems     OrderItem[]
   reviews        Review[]
   favorites      Favorite[]
+  deals          Deal[]
+  stockAlerts    StockAlert[]
 
   @@index([categoryId])
   @@index([inStock])
@@ -375,4 +382,52 @@ model ChatHistory {
 
   @@index([customerId])
   @@index([sessionId])
+}
+
+// ─── Referral ──────────────────────────────────────────
+
+model Referral {
+  id            String   @id @default(cuid())
+  referrerId    String
+  referrer      Profile  @relation("ReferralsMade", fields: [referrerId], references: [id])
+  referredId    String   @unique
+  referred      Profile  @relation("ReferralsReceived", fields: [referredId], references: [id])
+  pointsAwarded Int      @default(10)
+  createdAt     DateTime @default(now())
+
+  @@index([referrerId])
+}
+
+// ─── Deal (Daily Deals / Flash Sales) ──────────────────
+
+model Deal {
+  id          String   @id @default(cuid())
+  productId   String
+  product     Product  @relation(fields: [productId], references: [id])
+  titleEn     String
+  titleEs     String?
+  badgeText   String?
+  startsAt    DateTime
+  endsAt      DateTime
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([isActive, endsAt])
+  @@index([productId])
+}
+
+// ─── Stock Alert ───────────────────────────────────────
+
+model StockAlert {
+  id         String   @id @default(cuid())
+  customerId String
+  customer   Profile  @relation(fields: [customerId], references: [id])
+  productId  String
+  product    Product  @relation(fields: [productId], references: [id])
+  notified   Boolean  @default(false)
+  createdAt  DateTime @default(now())
+
+  @@unique([customerId, productId])
+  @@index([productId, notified])
 }

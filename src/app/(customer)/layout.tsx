@@ -3,6 +3,7 @@
 import Image from "next/image";
 import { usePathname } from "next/navigation";
 import Link from "next/link";
+import dynamic from "next/dynamic";
 import { motion } from "framer-motion";
 import {
   Home,
@@ -13,7 +14,16 @@ import {
 import { cn } from "@/lib/utils";
 import { useCartContext } from "@/context/CartContext";
 import AgeGate from "@/components/customer/AgeGate";
-import { AiChatbot } from "@/components/customer/AiChatbot";
+import OnboardingFlow from "@/components/customer/OnboardingFlow";
+
+// Lazy-load AI Chatbot — heavy component that isn't needed on initial paint
+const AiChatbot = dynamic(
+  () =>
+    import("@/components/customer/AiChatbot").then((m) => ({
+      default: m.AiChatbot,
+    })),
+  { ssr: false }
+);
 
 const navItems = [
   { href: "/", label: "Home", icon: Home },
@@ -37,7 +47,13 @@ export default function CustomerLayout({
 
   return (
     <>
+      {/* Skip to content — accessibility */}
+      <a href="#main-content" className="skip-to-content">
+        Skip to main content
+      </a>
+
       <AgeGate />
+      <OnboardingFlow />
 
       {/* Sticky Header */}
       <header className="sticky top-0 z-50 border-b border-emerald-900/30 bg-[#090F09]/95 backdrop-blur-md">
@@ -112,7 +128,7 @@ export default function CustomerLayout({
       </header>
 
       {/* Main Content */}
-      <main className="min-h-[calc(100vh-3.5rem-4rem)] pb-20 sm:min-h-[calc(100vh-4rem)] sm:pb-0">
+      <main id="main-content" className="min-h-[calc(100vh-3.5rem-4rem)] pb-20 sm:min-h-[calc(100vh-4rem)] sm:pb-0">
         {children}
       </main>
 

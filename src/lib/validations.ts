@@ -99,6 +99,17 @@ export const promotionSchema = z.object({
   targetAudience: z.string().optional(),
 });
 
+// ─── Referrals ──────────────────────────────────────────
+
+export const applyReferralSchema = z.object({
+  code: z
+    .string()
+    .min(1, "Referral code is required")
+    .max(20, "Invalid referral code"),
+});
+
+export type ApplyReferralInput = z.infer<typeof applyReferralSchema>;
+
 // ─── Profile ─────────────────────────────────────────────
 
 export const updateProfileSchema = z.object({
@@ -137,6 +148,27 @@ export const heroBannerSchema = z.object({
   isActive: z.boolean().default(true),
   sortOrder: z.number().int().default(0),
 });
+
+// ─── Deals ─────────────────────────────────────────────
+
+export const dealSchema = z.object({
+  productId: z.string().min(1, "Product is required"),
+  titleEn: z.string().min(1).max(200),
+  titleEs: z.string().max(200).optional(),
+  badgeText: z.string().max(50).optional(),
+  startsAt: z.string().datetime(),
+  endsAt: z.string().datetime(),
+});
+
+export type DealInput = z.infer<typeof dealSchema>;
+
+// ─── Stock Alerts ──────────────────────────────────────
+
+export const stockAlertSchema = z.object({
+  productId: z.string().min(1, "Product is required"),
+});
+
+export type StockAlertInput = z.infer<typeof stockAlertSchema>;
 
 // ─── Redemptions ────────────────────────────────────────
 

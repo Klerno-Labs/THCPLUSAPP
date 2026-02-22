@@ -1,3 +1,4 @@
+import { Metadata } from "next";
 import { db } from "@/lib/db";
 import HomeHero from "@/components/customer/HomeHero";
 
@@ -6,6 +7,20 @@ import FeaturedProducts from "@/components/customer/FeaturedProducts";
 import CategoryGrid from "@/components/customer/CategoryGrid";
 import AiBudtenderCTA from "@/components/customer/AiBudtenderCTA";
 import ActiveOrderCard from "@/components/customer/ActiveOrderCard";
+import TodaysDeals from "@/components/customer/TodaysDeals";
+import QuizCTA from "@/components/customer/QuizCTA";
+
+export const metadata: Metadata = {
+  title: "THC Plus | Premium Hemp Products Houston",
+  description:
+    "Browse and reserve premium THCA flower, concentrates, and pre-rolls for will-call pickup at THC Plus Houston.",
+  openGraph: {
+    title: "THC Plus | Premium Hemp Products",
+    description:
+      "Reserve premium THCA products for pickup in Houston. Browse our menu and order ahead.",
+    type: "website",
+  },
+};
 
 async function getFeaturedProducts() {
   try {
@@ -78,8 +93,10 @@ export default async function HomePage() {
     <div>
       <HomeHero banners={banners} />
       <ActiveOrderCard />
+      <TodaysDeals />
       <FeaturedProducts products={featuredProducts} />
       <CategoryGrid categories={categories} />
+      <QuizCTA />
       <AiBudtenderCTA />
     </div>
   );

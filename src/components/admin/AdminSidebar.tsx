@@ -3,7 +3,7 @@
 import React, { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import {
   ShoppingCart,
   Package,
@@ -17,10 +17,16 @@ import {
   ChevronLeft,
   ChevronRight,
   Menu,
-  X,
   Leaf,
+  Zap,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import {
+  Sheet,
+  SheetContent,
+  SheetTitle,
+  SheetTrigger,
+} from "@/components/ui/sheet";
 
 // ─── Types ───────────────────────────────────────────────
 interface NavItem {
@@ -56,6 +62,7 @@ const allNavItems: NavItem[] = [
   { label: "Analytics", href: "/admin/analytics", icon: BarChart3, adminOnly: true },
   { label: "Staff", href: "/admin/staff", icon: Trophy, adminOnly: true },
   { label: "Promotions", href: "/admin/promotions", icon: Megaphone, adminOnly: true },
+  { label: "Deals", href: "/admin/deals", icon: Zap, adminOnly: true },
   { label: "Export", href: "/admin/export", icon: Download, adminOnly: true },
 ];
 
@@ -98,40 +105,37 @@ export default function AdminSidebar({
     STAFF: "Staff",
   };
 
-  // ─── Desktop Sidebar ──────────────────────────────────
-  const SidebarContent = () => (
+  // Get current page title for mobile top bar
+  const currentPageTitle =
+    navItems.find((item) => isActive(item.href))?.label || "Dashboard";
+
+  // ─── Shared Nav Content ─────────────────────────────────
+  const NavContent = ({ isMobile = false }: { isMobile?: boolean }) => (
     <div className="flex h-full flex-col">
       {/* Logo */}
       <div
         className={cn(
           "flex items-center gap-3 border-b border-emerald-900/30 px-4 py-5",
-          collapsed && "justify-center px-2"
+          !isMobile && collapsed && "justify-center px-2"
         )}
       >
         <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-emerald-600 shadow-lg shadow-emerald-900/30">
           <Leaf className="h-5 w-5 text-white" />
         </div>
-        <AnimatePresence>
-          {!collapsed && (
-            <motion.div
-              initial={{ opacity: 0, width: 0 }}
-              animate={{ opacity: 1, width: "auto" }}
-              exit={{ opacity: 0, width: 0 }}
-              className="overflow-hidden whitespace-nowrap"
-            >
-              <h1 className="text-lg font-bold text-zinc-100">
-                THC<span className="text-emerald-400">+</span>
-              </h1>
-              <p className="text-[10px] font-medium uppercase tracking-wider text-zinc-500">
-                {userIsAdmin ? "Admin Dashboard" : "Fulfillment"}
-              </p>
-            </motion.div>
-          )}
-        </AnimatePresence>
+        {(isMobile || !collapsed) && (
+          <div className="overflow-hidden whitespace-nowrap">
+            <h1 className="text-lg font-bold text-zinc-100">
+              THC<span className="text-emerald-400">+</span>
+            </h1>
+            <p className="text-[10px] font-medium uppercase tracking-wider text-zinc-500">
+              {userIsAdmin ? "Admin Dashboard" : "Fulfillment"}
+            </p>
+          </div>
+        )}
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 space-y-1 overflow-y-auto px-3 py-4">
+      <nav className="flex-1 space-y-1 overflow-y-auto px-3 py-4" aria-label="Admin navigation">
         {navItems.map((item) => {
           const Icon = item.icon;
           const active = isActive(item.href);
@@ -140,19 +144,20 @@ export default function AdminSidebar({
             <Link
               key={item.href}
               href={item.href}
-              onClick={() => setMobileOpen(false)}
+              onClick={() => isMobile && setMobileOpen(false)}
+              aria-current={active ? "page" : undefined}
               className={cn(
                 "group relative flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200",
                 active
                   ? "bg-emerald-600/15 text-emerald-400"
                   : "text-zinc-400 hover:bg-emerald-950/50 hover:text-zinc-200",
-                collapsed && "justify-center px-2"
+                !isMobile && collapsed && "justify-center px-2"
               )}
             >
               {/* Active indicator bar */}
               {active && (
                 <motion.div
-                  layoutId="admin-nav-active"
+                  layoutId={isMobile ? "admin-nav-active-mobile" : "admin-nav-active"}
                   className="absolute left-0 top-1/2 h-6 w-[3px] -translate-y-1/2 rounded-r-full bg-emerald-400"
                   transition={{ type: "spring", stiffness: 350, damping: 30 }}
                 />
@@ -167,21 +172,14 @@ export default function AdminSidebar({
                 )}
               />
 
-              <AnimatePresence>
-                {!collapsed && (
-                  <motion.span
-                    initial={{ opacity: 0, width: 0 }}
-                    animate={{ opacity: 1, width: "auto" }}
-                    exit={{ opacity: 0, width: 0 }}
-                    className="overflow-hidden whitespace-nowrap"
-                  >
-                    {item.label}
-                  </motion.span>
-                )}
-              </AnimatePresence>
+              {(isMobile || !collapsed) && (
+                <span className="overflow-hidden whitespace-nowrap">
+                  {item.label}
+                </span>
+              )}
 
-              {/* Tooltip for collapsed mode */}
-              {collapsed && (
+              {/* Tooltip for collapsed desktop mode */}
+              {!isMobile && collapsed && (
                 <div className="pointer-events-none absolute left-full z-50 ml-2 hidden rounded-md bg-zinc-800 px-2.5 py-1.5 text-xs font-medium text-zinc-200 shadow-lg group-hover:block">
                   {item.label}
                 </div>
@@ -196,7 +194,7 @@ export default function AdminSidebar({
         <div
           className={cn(
             "flex items-center gap-3 rounded-lg p-2",
-            collapsed && "justify-center"
+            !isMobile && collapsed && "justify-center"
           )}
         >
           <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-emerald-900/50 text-sm font-bold text-emerald-400">
@@ -205,62 +203,50 @@ export default function AdminSidebar({
               .map((n) => n[0])
               .join("")}
           </div>
-          <AnimatePresence>
-            {!collapsed && (
-              <motion.div
-                initial={{ opacity: 0, width: 0 }}
-                animate={{ opacity: 1, width: "auto" }}
-                exit={{ opacity: 0, width: 0 }}
-                className="min-w-0 flex-1 overflow-hidden"
-              >
-                <p className="truncate text-sm font-medium text-zinc-200">
-                  {currentUser.name}
-                </p>
-                <p className="text-xs text-zinc-500">
-                  {roleLabel[currentUser.role] || currentUser.role}
-                </p>
-              </motion.div>
-            )}
-          </AnimatePresence>
+          {(isMobile || !collapsed) && (
+            <div className="min-w-0 flex-1 overflow-hidden">
+              <p className="truncate text-sm font-medium text-zinc-200">
+                {currentUser.name}
+              </p>
+              <p className="text-xs text-zinc-500">
+                {roleLabel[currentUser.role] || currentUser.role}
+              </p>
+            </div>
+          )}
         </div>
 
         <button
           onClick={handleSignOut}
           className={cn(
             "mt-2 flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-zinc-500 transition-colors hover:bg-red-950/30 hover:text-red-400",
-            collapsed && "justify-center px-2"
+            !isMobile && collapsed && "justify-center px-2"
           )}
         >
           <LogOut className="h-4 w-4 shrink-0" />
-          <AnimatePresence>
-            {!collapsed && (
-              <motion.span
-                initial={{ opacity: 0, width: 0 }}
-                animate={{ opacity: 1, width: "auto" }}
-                exit={{ opacity: 0, width: 0 }}
-                className="overflow-hidden whitespace-nowrap"
-              >
-                Sign Out
-              </motion.span>
-            )}
-          </AnimatePresence>
+          {(isMobile || !collapsed) && (
+            <span className="overflow-hidden whitespace-nowrap">
+              Sign Out
+            </span>
+          )}
         </button>
       </div>
 
       {/* Collapse toggle — desktop only */}
-      <div className="hidden border-t border-emerald-900/30 p-3 lg:block">
-        <button
-          onClick={() => setCollapsed(!collapsed)}
-          className="flex w-full items-center justify-center rounded-lg p-2 text-zinc-500 transition-colors hover:bg-emerald-950/50 hover:text-zinc-300"
-          aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
-        >
-          {collapsed ? (
-            <ChevronRight className="h-4 w-4" />
-          ) : (
-            <ChevronLeft className="h-4 w-4" />
-          )}
-        </button>
-      </div>
+      {!isMobile && (
+        <div className="border-t border-emerald-900/30 p-3">
+          <button
+            onClick={() => setCollapsed(!collapsed)}
+            className="flex w-full items-center justify-center rounded-lg p-2 text-zinc-500 transition-colors hover:bg-emerald-950/50 hover:text-zinc-300"
+            aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+          >
+            {collapsed ? (
+              <ChevronRight className="h-4 w-4" />
+            ) : (
+              <ChevronLeft className="h-4 w-4" />
+            )}
+          </button>
+        </div>
+      )}
     </div>
   );
 
@@ -275,54 +261,41 @@ export default function AdminSidebar({
           <span className="text-sm font-bold text-zinc-100">
             THC<span className="text-emerald-400">+</span>{" "}
             <span className="text-xs font-normal text-zinc-500">
-              {userIsAdmin ? "Admin" : "Staff"}
+              {currentPageTitle}
             </span>
           </span>
         </div>
-        <button
-          onClick={() => setMobileOpen(!mobileOpen)}
-          className="rounded-lg p-2 text-zinc-400 hover:bg-emerald-950/50 hover:text-zinc-200"
-          aria-label="Toggle navigation menu"
-        >
-          {mobileOpen ? (
-            <X className="h-5 w-5" />
-          ) : (
-            <Menu className="h-5 w-5" />
-          )}
-        </button>
-      </div>
 
-      {/* ─── Mobile Overlay ───────────────────────────────── */}
-      <AnimatePresence>
-        {mobileOpen && (
-          <>
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="fixed inset-0 z-40 bg-black/60 lg:hidden"
-              onClick={() => setMobileOpen(false)}
-            />
-            <motion.aside
-              initial={{ x: -280 }}
-              animate={{ x: 0 }}
-              exit={{ x: -280 }}
-              transition={{ type: "spring", stiffness: 300, damping: 30 }}
-              className="fixed left-0 top-0 z-50 h-full w-[280px] border-r border-emerald-900/30 bg-[#111A11] lg:hidden"
+        {/* Mobile hamburger — Sheet trigger */}
+        <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
+          <SheetTrigger asChild>
+            <button
+              className="rounded-lg p-2 text-zinc-400 hover:bg-emerald-950/50 hover:text-zinc-200"
+              aria-label="Open navigation menu"
             >
-              <SidebarContent />
-            </motion.aside>
-          </>
-        )}
-      </AnimatePresence>
+              <Menu className="h-5 w-5" />
+            </button>
+          </SheetTrigger>
+
+          <SheetContent
+            side="left"
+            className="w-[280px] border-emerald-900/30 bg-[#111A11] p-0"
+          >
+            <SheetTitle className="sr-only">Navigation Menu</SheetTitle>
+            <NavContent isMobile />
+          </SheetContent>
+        </Sheet>
+      </div>
 
       {/* ─── Desktop Sidebar ──────────────────────────────── */}
       <motion.aside
         animate={{ width: collapsed ? 72 : 260 }}
         transition={{ type: "spring", stiffness: 300, damping: 30 }}
         className="fixed left-0 top-0 z-30 hidden h-screen border-r border-emerald-900/30 bg-[#111A11] lg:block"
+        role="navigation"
+        aria-label="Admin sidebar navigation"
       >
-        <SidebarContent />
+        <NavContent />
       </motion.aside>
 
       {/* ─── Spacer for layout ─────────────────────────────── */}

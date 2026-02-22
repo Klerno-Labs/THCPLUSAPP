@@ -13,6 +13,10 @@ import {
   Settings,
   ShieldCheck,
   Loader2,
+  Share2,
+  Gift,
+  Check,
+  BarChart3,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
@@ -26,6 +30,7 @@ import {
 } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import FadeIn from "@/components/customer/FadeIn";
+import { toast } from "@/components/ui/use-toast";
 
 interface OrderHistoryItem {
   id: string;
@@ -71,6 +76,12 @@ const accountNavItems = [
     description: "Points and tier status",
   },
   {
+    label: "Spending Insights",
+    icon: BarChart3,
+    href: "/account/insights",
+    description: "Your spending stats",
+  },
+  {
     label: "Settings",
     icon: Settings,
     href: "/account/settings",
@@ -78,10 +89,18 @@ const accountNavItems = [
   },
 ];
 
+interface ReferralData {
+  referralCode: string;
+  referralCount: number;
+  totalPointsEarned: number;
+}
+
 export default function AccountPage() {
   const [data, setData] = useState<AccountData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [referralData, setReferralData] = useState<ReferralData | null>(null);
+  const [codeCopied, setCodeCopied] = useState(false);
 
   useEffect(() => {
     async function loadAccount() {
@@ -92,11 +111,20 @@ export default function AccountPage() {
           if (session?.user?.id) {
             setIsAuthenticated(true);
 
-            // Fetch account data
-            const accountRes = await fetch("/api/account");
+            // Fetch account data and referral data in parallel
+            const [accountRes, referralRes] = await Promise.all([
+              fetch("/api/account"),
+              fetch("/api/referrals"),
+            ]);
+
             if (accountRes.ok) {
               const accountData = await accountRes.json();
               setData(accountData);
+            }
+
+            if (referralRes.ok) {
+              const refData = await referralRes.json();
+              setReferralData(refData);
             }
           }
         }
@@ -271,6 +299,95 @@ export default function AccountPage() {
             ))}
           </div>
         </FadeIn>
+
+        {/* Refer a Friend */}
+        {referralData && (
+          <FadeIn delay={0.12}>
+            <div className="mt-6 rounded-2xl border border-emerald-800/30 bg-[#111A11] p-5">
+              <div className="flex items-center gap-2 mb-4">
+                <Gift className="h-5 w-5 text-[#D4AF37]" />
+                <h2 className="text-lg font-bold text-white">
+                  Refer a Friend
+                </h2>
+              </div>
+
+              <p className="text-xs text-zinc-400 mb-4">
+                Share your code and you both earn 10 bonus points!
+              </p>
+
+              {/* Code display + share/copy */}
+              <div className="flex items-center gap-2 mb-4">
+                <div className="flex-1 rounded-lg border border-emerald-900/50 bg-[#0D150D] px-4 py-3">
+                  <span className="font-mono text-lg font-bold tracking-widest text-emerald-400">
+                    {referralData.referralCode}
+                  </span>
+                </div>
+                <button
+                  onClick={async () => {
+                    const shareMsg = `Use my code ${referralData.referralCode} to get 10 bonus points at THC Plus! Order at order.thcplus.com`;
+
+                    if (navigator.share) {
+                      try {
+                        await navigator.share({
+                          title: "THC Plus Referral",
+                          text: shareMsg,
+                        });
+                        return;
+                      } catch {
+                        // User cancelled or share failed, fall through to copy
+                      }
+                    }
+
+                    // Fallback: copy to clipboard
+                    try {
+                      await navigator.clipboard.writeText(shareMsg);
+                      setCodeCopied(true);
+                      toast({
+                        title: "Copied!",
+                        description:
+                          "Referral message copied to clipboard.",
+                      });
+                      setTimeout(() => setCodeCopied(false), 2000);
+                    } catch {
+                      toast({
+                        title: "Could not copy",
+                        description: "Please copy the code manually.",
+                        variant: "destructive",
+                      });
+                    }
+                  }}
+                  className="flex h-12 w-12 items-center justify-center rounded-lg border border-emerald-700/50 bg-emerald-950/40 text-emerald-400 transition-colors hover:border-emerald-600 hover:bg-emerald-900/40 hover:text-emerald-300 active:scale-95"
+                >
+                  {codeCopied ? (
+                    <Check className="h-5 w-5" />
+                  ) : (
+                    <Share2 className="h-5 w-5" />
+                  )}
+                </button>
+              </div>
+
+              {/* Stats */}
+              <div className="grid grid-cols-2 gap-3">
+                <div className="rounded-lg bg-[#0D150D] px-3 py-2.5 text-center">
+                  <div className="text-xl font-bold text-white">
+                    {referralData.referralCount}
+                  </div>
+                  <div className="text-[10px] text-zinc-500 uppercase tracking-wide">
+                    Referrals
+                  </div>
+                </div>
+                <div className="rounded-lg bg-[#0D150D] px-3 py-2.5 text-center">
+                  <div className="text-xl font-bold text-[#D4AF37]">
+                    +{referralData.totalPointsEarned}
+                  </div>
+                  <div className="text-[10px] text-zinc-500 uppercase tracking-wide">
+                    Bonus Pts
+                  </div>
+                </div>
+              </div>
+            </div>
+          </FadeIn>
+        )}
 
         {/* Recent orders */}
         <FadeIn delay={0.15}>

@@ -79,9 +79,40 @@ export async function generateMetadata({ params }: ProductDetailPageProps) {
   const product = await getProduct(params.id);
   if (!product) return { title: "Product Not Found" };
 
+  const title = `${product.name} | THC Plus`;
+  const description =
+    product.descriptionEn ||
+    `${product.name} - Premium hemp product available at THC Plus Houston. Browse and reserve for will-call pickup.`;
+  const url = `https://order.thcplus.com/products/${product.id}`;
+
   return {
-    title: `${product.name} | THC Plus`,
-    description: product.descriptionEn || `${product.name} - Premium hemp product available at THC Plus`,
+    title,
+    description,
+    openGraph: {
+      title,
+      description,
+      url,
+      type: "website",
+      siteName: "THC Plus",
+      ...(product.imageUrl && {
+        images: [
+          {
+            url: product.imageUrl,
+            width: 800,
+            height: 800,
+            alt: product.name,
+          },
+        ],
+      }),
+    },
+    twitter: {
+      card: product.imageUrl ? "summary_large_image" : "summary",
+      title,
+      description,
+      ...(product.imageUrl && {
+        images: [product.imageUrl],
+      }),
+    },
   };
 }
 

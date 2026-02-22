@@ -73,6 +73,11 @@ export default function AdminLayout({
 
   return (
     <div className="flex min-h-screen bg-[#090F09]">
+      {/* Skip to content — accessibility */}
+      <a href="#admin-main-content" className="skip-to-content">
+        Skip to main content
+      </a>
+
       <AdminSidebar
         currentUser={{
           name: userName,
@@ -83,7 +88,7 @@ export default function AdminLayout({
       />
 
       {/* Main content area */}
-      <main className="flex-1 pt-14 lg:pt-0">
+      <main id="admin-main-content" className="flex-1 pt-14 lg:pt-0">
         <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
           {children}
         </div>

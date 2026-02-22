@@ -11,6 +11,14 @@
     {
       "path": "/api/cron/loyalty-tiers",
       "schedule": "0 9 * * *"
+    },
+    {
+      "path": "/api/cron/expire-redemptions",
+      "schedule": "0 10 * * *"
+    },
+    {
+      "path": "/api/cron/expire-deals",
+      "schedule": "0 * * * *"
     }
   ]
 }

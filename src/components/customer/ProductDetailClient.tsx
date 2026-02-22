@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import {
@@ -15,6 +15,9 @@ import {
   Scale,
   Info,
   Heart,
+  Bell,
+  BellOff,
+  Loader2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { formatPrice } from "@/lib/utils";
@@ -25,6 +28,7 @@ import { useToast } from "@/components/ui/use-toast";
 import { useFavorites } from "@/context/FavoritesContext";
 import { useSession } from "next-auth/react";
 import FadeIn from "./FadeIn";
+import ShareButton from "./ShareButton";
 
 interface Review {
   id: string;
@@ -100,6 +104,79 @@ export default function ProductDetailClient({
   const [localReviews, setLocalReviews] = useState<Review[]>(product.reviews);
 
   const favorited = isFavorited(product.id);
+
+  // Stock alert state
+  const [stockAlertSubscribed, setStockAlertSubscribed] = useState(false);
+  const [stockAlertLoading, setStockAlertLoading] = useState(false);
+  const [stockAlertChecked, setStockAlertChecked] = useState(false);
+
+  // Check if already subscribed to stock alert
+  const checkStockAlert = useCallback(async () => {
+    if (!isLoggedIn || product.inStock) return;
+    try {
+      const res = await fetch("/api/stock-alerts");
+      if (!res.ok) return;
+      const alerts = await res.json();
+      const subscribed = alerts.some(
+        (a: { productId: string }) => a.productId === product.id
+      );
+      setStockAlertSubscribed(subscribed);
+    } catch {
+      // silently fail
+    } finally {
+      setStockAlertChecked(true);
+    }
+  }, [isLoggedIn, product.id, product.inStock]);
+
+  useEffect(() => {
+    checkStockAlert();
+  }, [checkStockAlert]);
+
+  const handleStockAlertToggle = async () => {
+    if (!isLoggedIn) return;
+    setStockAlertLoading(true);
+    try {
+      if (stockAlertSubscribed) {
+        // Unsubscribe
+        const res = await fetch("/api/stock-alerts", {
+          method: "DELETE",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ productId: product.id }),
+        });
+        if (res.ok) {
+          setStockAlertSubscribed(false);
+          toast({
+            title: "Alert removed",
+            description: "You will no longer be notified when this product is back in stock.",
+            variant: "success",
+          });
+        }
+      } else {
+        // Subscribe
+        const res = await fetch("/api/stock-alerts", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ productId: product.id }),
+        });
+        if (res.ok) {
+          setStockAlertSubscribed(true);
+          toast({
+            title: "Alert set",
+            description: "We'll notify you when this product is back in stock.",
+            variant: "success",
+          });
+        }
+      }
+    } catch {
+      toast({
+        title: "Something went wrong",
+        description: "Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setStockAlertLoading(false);
+    }
+  };
 
   const handleAddToOrder = () => {
     if (!product.inStock) return;
@@ -272,34 +349,41 @@ export default function ProductDetailClient({
                 )}
               </div>
 
-              {/* Name + Favorite button */}
+              {/* Name + Favorite + Share buttons */}
               <div className="mt-2 flex items-start justify-between gap-3">
                 <h1 className="text-2xl font-bold text-white sm:text-3xl">
                   {product.name}
                 </h1>
-                {isCustomer && (
-                  <button
-                    onClick={handleToggleFavorite}
-                    aria-label={
-                      favorited
-                        ? "Remove from favorites"
-                        : "Add to favorites"
-                    }
-                    className={cn(
-                      "flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-full border transition-all",
-                      favorited
-                        ? "border-rose-700/50 bg-rose-950/40 text-rose-400 hover:bg-rose-950/60"
-                        : "border-zinc-700/40 bg-zinc-900/40 text-zinc-500 hover:border-rose-700/40 hover:text-rose-400"
-                    )}
-                  >
-                    <Heart
+                <div className="flex flex-shrink-0 items-center gap-2">
+                  <ShareButton
+                    title={`${product.name} | THC Plus`}
+                    text={`Check out ${product.name} at THC Plus!`}
+                    url={`https://order.thcplus.com/products/${product.id}`}
+                  />
+                  {isCustomer && (
+                    <button
+                      onClick={handleToggleFavorite}
+                      aria-label={
+                        favorited
+                          ? "Remove from favorites"
+                          : "Add to favorites"
+                      }
                       className={cn(
-                        "h-5 w-5 transition-all",
-                        favorited && "fill-rose-400"
+                        "flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-full border transition-all",
+                        favorited
+                          ? "border-rose-700/50 bg-rose-950/40 text-rose-400 hover:bg-rose-950/60"
+                          : "border-zinc-700/40 bg-zinc-900/40 text-zinc-500 hover:border-rose-700/40 hover:text-rose-400"
                       )}
-                    />
-                  </button>
-                )}
+                    >
+                      <Heart
+                        className={cn(
+                          "h-5 w-5 transition-all",
+                          favorited && "fill-rose-400"
+                        )}
+                      />
+                    </button>
+                  )}
+                </div>
               </div>
 
               {/* Rating */}
@@ -419,6 +503,50 @@ export default function ProductDetailClient({
                   Add to Order
                 </Button>
               </div>
+
+              {/* Stock Alert — shown when out of stock */}
+              {!product.inStock && isLoggedIn && stockAlertChecked && (
+                <div className="mt-6">
+                  <button
+                    onClick={handleStockAlertToggle}
+                    disabled={stockAlertLoading}
+                    className={cn(
+                      "flex h-12 w-full items-center justify-center gap-2.5 rounded-xl border text-sm font-semibold transition-all sm:w-auto sm:px-6",
+                      stockAlertSubscribed
+                        ? "border-amber-700/40 bg-amber-950/30 text-amber-300 hover:bg-amber-950/50"
+                        : "border-emerald-700/40 bg-emerald-950/30 text-emerald-300 hover:bg-emerald-950/50"
+                    )}
+                  >
+                    {stockAlertLoading ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : stockAlertSubscribed ? (
+                      <>
+                        <BellOff className="h-4 w-4" />
+                        You&apos;ll be notified &middot; Tap to cancel
+                      </>
+                    ) : (
+                      <>
+                        <Bell className="h-4 w-4" />
+                        Notify Me When Back in Stock
+                      </>
+                    )}
+                  </button>
+                </div>
+              )}
+
+              {!product.inStock && !isLoggedIn && (
+                <div className="mt-6 rounded-xl border border-zinc-700/30 bg-zinc-900/30 p-3 text-center">
+                  <p className="text-sm text-zinc-400">
+                    <Link
+                      href="/auth/signin"
+                      className="font-semibold text-emerald-400 underline underline-offset-2 hover:text-emerald-300"
+                    >
+                      Sign in
+                    </Link>{" "}
+                    to get notified when this product is back in stock.
+                  </p>
+                </div>
+              )}
 
               {/* Info notice */}
               <div className="mt-4 flex items-start gap-2 rounded-lg border border-zinc-700/30 bg-zinc-900/50 px-3 py-2.5">
