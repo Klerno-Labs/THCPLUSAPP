@@ -53,6 +53,13 @@ enum PromotionType {
   BOTH
 }
 
+enum RedemptionStatus {
+  PENDING
+  FULFILLED
+  EXPIRED
+  CANCELLED
+}
+
 // ─── Profile (Customer Account) ──────────────────────────
 
 model Profile {
@@ -73,6 +80,7 @@ model Profile {
   loyaltyTransactions LoyaltyTransaction[]
   reviews             Review[]
   favorites           Favorite[]
+  redemptions         Redemption[]
 
   @@index([phone])
   @@index([email])
@@ -281,6 +289,7 @@ model StaffUser {
 
   promotions       Promotion[]
   staffPerformance StaffPerformance[]
+  redemptions      Redemption[]
 
   @@index([email])
 }
@@ -329,6 +338,29 @@ model HeroBanner {
   sortOrder Int      @default(0)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+// ─── Redemption ─────────────────────────────────────────
+
+model Redemption {
+  id            String           @id @default(cuid())
+  customerId    String
+  customer      Profile          @relation(fields: [customerId], references: [id])
+  rewardKey     String
+  rewardLabel   String
+  pointsCost    Int
+  status        RedemptionStatus @default(PENDING)
+  fulfilledById String?
+  fulfilledBy   StaffUser?       @relation(fields: [fulfilledById], references: [id])
+  fulfilledAt   DateTime?
+  expiresAt     DateTime
+  loyaltyTxId   String?
+  staffNotes    String?
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+
+  @@index([customerId])
+  @@index([status])
 }
 
 // ─── Chat History ────────────────────────────────────────

@@ -138,6 +138,20 @@ export const heroBannerSchema = z.object({
   sortOrder: z.number().int().default(0),
 });
 
+// ─── Redemptions ────────────────────────────────────────
+
+export const redeemRewardSchema = z.object({
+  rewardKey: z.string().min(1, "Reward key is required"),
+});
+
+export const fulfillRedemptionSchema = z.object({
+  status: z.enum(["FULFILLED", "CANCELLED"]),
+  staffNotes: z.string().max(500).optional(),
+});
+
+export type RedeemRewardInput = z.infer<typeof redeemRewardSchema>;
+export type FulfillRedemptionInput = z.infer<typeof fulfillRedemptionSchema>;
+
 export type LoginInput = z.infer<typeof loginSchema>;
 export type CustomerSignupInput = z.infer<typeof customerSignupSchema>;
 export type GuestSessionInput = z.infer<typeof guestSessionSchema>;

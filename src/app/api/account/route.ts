@@ -54,9 +54,22 @@ export async function GET() {
       take: 50,
     });
 
-    const favoriteCount = await prisma.favorite.count({
-      where: { customerId: session.user.id },
-    });
+    const [favoriteCount, pendingRedemptions] = await Promise.all([
+      prisma.favorite.count({
+        where: { customerId: session.user.id },
+      }),
+      prisma.redemption.findMany({
+        where: { customerId: session.user.id, status: "PENDING" },
+        select: {
+          id: true,
+          rewardKey: true,
+          rewardLabel: true,
+          pointsCost: true,
+          expiresAt: true,
+          createdAt: true,
+        },
+      }),
+    ]);
 
     return NextResponse.json({
       profile: profile
@@ -77,6 +90,7 @@ export async function GET() {
         createdAt: o.createdAt.toISOString(),
       })),
       favoriteCount,
+      pendingRedemptions,
     });
   } catch (error) {
     console.error("GET /api/account error:", error);
