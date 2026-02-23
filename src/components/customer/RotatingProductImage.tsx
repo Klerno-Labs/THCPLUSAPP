@@ -13,7 +13,7 @@ export default function RotatingProductImage() {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ duration: 1, delay: 0.3 }}
-          className="relative h-[280px] w-[280px] opacity-30 sm:h-[400px] sm:w-[400px] sm:opacity-40 lg:h-[500px] lg:w-[500px]"
+          className="relative h-[280px] w-[280px] opacity-15 sm:h-[400px] sm:w-[400px] sm:opacity-20 lg:h-[500px] lg:w-[500px]"
         >
           <Image
             src="/products/Platinum-Mac-hero.png"
@@ -42,7 +42,7 @@ export default function RotatingProductImage() {
         <div className="animate-hero-float">
           <div className="animate-hero-tilt">
             {/* Glow + image */}
-            <div className="hero-product-tilt relative h-[280px] w-[280px] opacity-40 sm:h-[400px] sm:w-[400px] sm:opacity-55 lg:h-[520px] lg:w-[520px]">
+            <div className="hero-product-tilt relative h-[280px] w-[280px] opacity-20 sm:h-[400px] sm:w-[400px] sm:opacity-25 lg:h-[520px] lg:w-[520px]">
               <Image
                 src="/products/Platinum-Mac-hero.png"
                 alt=""
