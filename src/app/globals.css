@@ -226,24 +226,27 @@
     text-wrap: balance;
   }
 
-  /* 3D rotating hero product — combined rotation + glow on one element */
-  .hero-product-spin {
+  /* 3D hero product — subtle tilt + glow for realistic floating look */
+  .hero-product-tilt {
     will-change: transform, filter;
     transform-style: preserve-3d;
-    animation:
-      rotate-y-360 20s linear infinite,
-      glow-pulse-gold 4s ease-in-out infinite;
+    animation: hero-glow 4s ease-in-out infinite;
   }
 
-  /* Soft radial fade mask for hero product image edges */
+  /* Soft radial fade mask — wider ellipse for more natural edges */
   .hero-product-mask {
-    mask-image: radial-gradient(ellipse 70% 70% at center, black 50%, transparent 100%);
-    -webkit-mask-image: radial-gradient(ellipse 70% 70% at center, black 50%, transparent 100%);
+    mask-image: radial-gradient(ellipse 80% 80% at center, black 55%, transparent 100%);
+    -webkit-mask-image: radial-gradient(ellipse 80% 80% at center, black 55%, transparent 100%);
+  }
+
+  /* Ground shadow — elliptical blob under floating bud */
+  .hero-ground-shadow {
+    background: radial-gradient(ellipse at center, rgba(16,185,129,0.15) 0%, rgba(212,175,55,0.06) 40%, transparent 70%);
   }
 
   /* Reduced motion: stop continuous hero animations */
   @media (prefers-reduced-motion: reduce) {
-    .hero-product-spin {
+    .hero-product-tilt {
       animation: none !important;
       will-change: auto;
     }

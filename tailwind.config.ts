@@ -112,20 +112,27 @@ const config: Config = {
           from: { opacity: "0", transform: "translateY(8px)" },
           to: { opacity: "1", transform: "translateY(0)" },
         },
-        "rotate-y-360": {
-          "0%": { transform: "perspective(1000px) rotateY(0deg)" },
-          "100%": { transform: "perspective(1000px) rotateY(360deg)" },
+        "hero-tilt": {
+          "0%": { transform: "perspective(800px) rotateX(2deg) rotateY(-3deg) rotateZ(0deg)" },
+          "25%": { transform: "perspective(800px) rotateX(-2deg) rotateY(2deg) rotateZ(0.5deg)" },
+          "50%": { transform: "perspective(800px) rotateX(1deg) rotateY(3deg) rotateZ(-0.5deg)" },
+          "75%": { transform: "perspective(800px) rotateX(-1deg) rotateY(-2deg) rotateZ(0.3deg)" },
+          "100%": { transform: "perspective(800px) rotateX(2deg) rotateY(-3deg) rotateZ(0deg)" },
         },
-        "float-y": {
+        "hero-float": {
           "0%, 100%": { transform: "translateY(0px)" },
-          "50%": { transform: "translateY(-12px)" },
+          "50%": { transform: "translateY(-14px)" },
         },
-        "glow-pulse-gold": {
+        "hero-shadow": {
+          "0%, 100%": { transform: "scale(1)", opacity: "0.4" },
+          "50%": { transform: "scale(0.85)", opacity: "0.2" },
+        },
+        "hero-glow": {
           "0%, 100%": {
-            filter: "drop-shadow(0 0 20px rgba(212,175,55,0.15))",
+            filter: "drop-shadow(0 0 15px rgba(212,175,55,0.12)) drop-shadow(0 0 40px rgba(16,185,129,0.08))",
           },
           "50%": {
-            filter: "drop-shadow(0 0 40px rgba(212,175,55,0.35))",
+            filter: "drop-shadow(0 0 30px rgba(212,175,55,0.25)) drop-shadow(0 0 60px rgba(16,185,129,0.15))",
           },
         },
       },
@@ -135,9 +142,10 @@ const config: Config = {
         shimmer: "shimmer 2s infinite linear",
         "pulse-glow": "pulse-glow 2s infinite ease-in-out",
         "fade-in": "fade-in 0.2s ease-out",
-        "rotate-y-360": "rotate-y-360 20s linear infinite",
-        "float-y": "float-y 6s ease-in-out infinite",
-        "glow-pulse-gold": "glow-pulse-gold 4s ease-in-out infinite",
+        "hero-tilt": "hero-tilt 12s ease-in-out infinite",
+        "hero-float": "hero-float 6s ease-in-out infinite",
+        "hero-shadow": "hero-shadow 6s ease-in-out infinite",
+        "hero-glow": "hero-glow 4s ease-in-out infinite",
       },
     },
   },

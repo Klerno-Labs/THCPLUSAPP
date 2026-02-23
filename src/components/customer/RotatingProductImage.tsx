@@ -13,7 +13,7 @@ export default function RotatingProductImage() {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ duration: 1, delay: 0.3 }}
-          className="relative h-[280px] w-[280px] opacity-25 sm:h-[400px] sm:w-[400px] sm:opacity-35 lg:h-[500px] lg:w-[500px]"
+          className="relative h-[280px] w-[280px] opacity-30 sm:h-[400px] sm:w-[400px] sm:opacity-40 lg:h-[500px] lg:w-[500px]"
         >
           <Image
             src="/products/Platinum-Mac-hero.png"
@@ -31,25 +31,33 @@ export default function RotatingProductImage() {
 
   return (
     <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
-      {/* Outer: Framer Motion entrance + CSS float animation */}
+      {/* Float layer — gentle up/down hover */}
       <motion.div
-        initial={{ opacity: 0, scale: 0.85 }}
-        animate={{ opacity: 1, scale: 1 }}
-        transition={{ duration: 1.2, delay: 0.2, ease: "easeOut" }}
-        className="relative h-[280px] w-[280px] opacity-25 sm:h-[400px] sm:w-[400px] sm:opacity-35 lg:h-[500px] lg:w-[500px] animate-float-y"
+        initial={{ opacity: 0, scale: 0.85, y: 20 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        transition={{ duration: 1.4, delay: 0.2, ease: "easeOut" }}
+        className="relative flex flex-col items-center"
       >
-        {/* Inner: CSS rotation + gold glow (combined in hero-product-spin) */}
-        <div className="hero-product-spin h-full w-full">
-          <Image
-            src="/products/Platinum-Mac-hero.png"
-            alt=""
-            fill
-            sizes="(max-width: 640px) 280px, (max-width: 1024px) 400px, 500px"
-            className="object-contain hero-product-mask"
-            priority={false}
-            aria-hidden="true"
-          />
+        {/* Tilt layer — slow perspective rotation for 3D feel */}
+        <div className="animate-hero-float">
+          <div className="animate-hero-tilt">
+            {/* Glow + image */}
+            <div className="hero-product-tilt relative h-[280px] w-[280px] opacity-40 sm:h-[400px] sm:w-[400px] sm:opacity-55 lg:h-[520px] lg:w-[520px]">
+              <Image
+                src="/products/Platinum-Mac-hero.png"
+                alt=""
+                fill
+                sizes="(max-width: 640px) 280px, (max-width: 1024px) 400px, 520px"
+                className="object-contain hero-product-mask"
+                priority={false}
+                aria-hidden="true"
+              />
+            </div>
+          </div>
         </div>
+
+        {/* Ground shadow — sits below the bud, pulses with the float */}
+        <div className="animate-hero-shadow hero-ground-shadow mt-2 h-6 w-[180px] rounded-full blur-xl sm:mt-4 sm:h-8 sm:w-[260px] lg:w-[320px]" />
       </motion.div>
     </div>
   );
