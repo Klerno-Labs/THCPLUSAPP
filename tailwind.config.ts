@@ -112,12 +112,9 @@ const config: Config = {
           from: { opacity: "0", transform: "translateY(8px)" },
           to: { opacity: "1", transform: "translateY(0)" },
         },
-        "hero-tilt": {
-          "0%": { transform: "perspective(800px) rotateX(2deg) rotateY(-3deg) rotateZ(0deg)" },
-          "25%": { transform: "perspective(800px) rotateX(-2deg) rotateY(2deg) rotateZ(0.5deg)" },
-          "50%": { transform: "perspective(800px) rotateX(1deg) rotateY(3deg) rotateZ(-0.5deg)" },
-          "75%": { transform: "perspective(800px) rotateX(-1deg) rotateY(-2deg) rotateZ(0.3deg)" },
-          "100%": { transform: "perspective(800px) rotateX(2deg) rotateY(-3deg) rotateZ(0deg)" },
+        "hero-rotate": {
+          "0%": { transform: "perspective(800px) rotateX(5deg) rotateY(0deg)" },
+          "100%": { transform: "perspective(800px) rotateX(5deg) rotateY(360deg)" },
         },
         "hero-float": {
           "0%, 100%": { transform: "translateY(0px)" },
@@ -142,7 +139,7 @@ const config: Config = {
         shimmer: "shimmer 2s infinite linear",
         "pulse-glow": "pulse-glow 2s infinite ease-in-out",
         "fade-in": "fade-in 0.2s ease-out",
-        "hero-tilt": "hero-tilt 12s ease-in-out infinite",
+        "hero-rotate": "hero-rotate 25s linear infinite",
         "hero-float": "hero-float 6s ease-in-out infinite",
         "hero-shadow": "hero-shadow 6s ease-in-out infinite",
         "hero-glow": "hero-glow 4s ease-in-out infinite",

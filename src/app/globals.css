@@ -226,11 +226,13 @@
     text-wrap: balance;
   }
 
-  /* 3D hero product — subtle tilt + glow for realistic floating look */
-  .hero-product-tilt {
+  /* 3D hero product — slow 360° spin + ambient glow */
+  .hero-product-spin {
     will-change: transform, filter;
     transform-style: preserve-3d;
-    animation: hero-glow 4s ease-in-out infinite;
+    animation:
+      hero-rotate 25s linear infinite,
+      hero-glow 4s ease-in-out infinite;
   }
 
   /* Soft radial fade mask — wider ellipse for more natural edges */
@@ -246,7 +248,7 @@
 
   /* Reduced motion: stop continuous hero animations */
   @media (prefers-reduced-motion: reduce) {
-    .hero-product-tilt {
+    .hero-product-spin {
       animation: none !important;
       will-change: auto;
     }
