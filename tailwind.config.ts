@@ -112,6 +112,22 @@ const config: Config = {
           from: { opacity: "0", transform: "translateY(8px)" },
           to: { opacity: "1", transform: "translateY(0)" },
         },
+        "rotate-y-360": {
+          "0%": { transform: "perspective(1000px) rotateY(0deg)" },
+          "100%": { transform: "perspective(1000px) rotateY(360deg)" },
+        },
+        "float-y": {
+          "0%, 100%": { transform: "translateY(0px)" },
+          "50%": { transform: "translateY(-12px)" },
+        },
+        "glow-pulse-gold": {
+          "0%, 100%": {
+            filter: "drop-shadow(0 0 20px rgba(212,175,55,0.15))",
+          },
+          "50%": {
+            filter: "drop-shadow(0 0 40px rgba(212,175,55,0.35))",
+          },
+        },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
@@ -119,6 +135,9 @@ const config: Config = {
         shimmer: "shimmer 2s infinite linear",
         "pulse-glow": "pulse-glow 2s infinite ease-in-out",
         "fade-in": "fade-in 0.2s ease-out",
+        "rotate-y-360": "rotate-y-360 20s linear infinite",
+        "float-y": "float-y 6s ease-in-out infinite",
+        "glow-pulse-gold": "glow-pulse-gold 4s ease-in-out infinite",
       },
     },
   },

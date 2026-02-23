@@ -5,6 +5,7 @@ import Image from "next/image";
 import { motion } from "framer-motion";
 import { ArrowRight, Search, ShoppingCart, MapPin } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import RotatingProductImage from "@/components/customer/RotatingProductImage";
 
 interface HeroBanner {
   id: string;
@@ -21,6 +22,7 @@ interface HomeHeroProps {
 
 export default function HomeHero({ banners }: HomeHeroProps) {
   const banner = banners[0];
+  const hasBanner = !!banner;
 
   return (
     <section className="relative overflow-hidden">
@@ -38,6 +40,9 @@ export default function HomeHero({ banners }: HomeHeroProps) {
           backgroundSize: "60px 60px",
         }}
       />
+
+      {/* 3D Rotating Product Image — behind text */}
+      {!hasBanner && <RotatingProductImage />}
 
       <div className="relative mx-auto max-w-7xl px-4 pb-16 pt-10 sm:px-6 sm:pb-24 sm:pt-16">
         <div className="flex flex-col items-center text-center">
@@ -74,12 +79,13 @@ export default function HomeHero({ banners }: HomeHeroProps) {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.15 }}
-            className="max-w-3xl text-3xl font-bold leading-tight tracking-tight text-white sm:text-4xl lg:text-5xl"
+            className="relative z-10 max-w-3xl text-3xl font-bold leading-tight tracking-tight text-white sm:text-4xl lg:text-5xl"
           >
             {banner?.titleEn || (
               <>
-                Browse. Reserve.{" "}
-                <span className="text-gold-gradient">Pick Up.</span>
+                Premium Hemp,
+                <br />
+                <span className="text-gold-gradient">Ready When You Are.</span>
               </>
             )}
           </motion.h1>
@@ -89,7 +95,7 @@ export default function HomeHero({ banners }: HomeHeroProps) {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.25 }}
-            className="mt-4 max-w-xl text-base text-zinc-400 sm:text-lg"
+            className="relative z-10 mt-4 max-w-xl text-base text-zinc-400 sm:text-lg"
           >
             {banner?.bodyEn ||
               "Reserve your favorites online and pick up at your convenience. No payment required until pickup."}
@@ -100,7 +106,7 @@ export default function HomeHero({ banners }: HomeHeroProps) {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.35 }}
-            className="mt-8"
+            className="relative z-10 mt-8"
           >
             <Button asChild size="lg" className="group btn-gold rounded-full px-8 text-base h-12 w-full sm:w-auto">
               <Link href="/products">
@@ -115,7 +121,7 @@ export default function HomeHero({ banners }: HomeHeroProps) {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.5 }}
-            className="mt-14 grid w-full max-w-2xl grid-cols-3 gap-3 sm:gap-8"
+            className="relative z-10 mt-14 grid w-full max-w-2xl grid-cols-3 gap-3 sm:gap-8"
           >
             {[
               {
@@ -159,7 +165,7 @@ export default function HomeHero({ banners }: HomeHeroProps) {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ duration: 0.6, delay: 0.7 }}
-            className="mt-10 flex flex-wrap items-center justify-center gap-6 text-xs text-zinc-500"
+            className="relative z-10 mt-10 flex flex-wrap items-center justify-center gap-6 text-xs text-zinc-500"
           >
             <div className="flex items-center gap-1.5">
               <div className="h-1.5 w-1.5 rounded-full bg-gold" />
