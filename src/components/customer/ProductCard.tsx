@@ -3,7 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { motion } from "framer-motion";
-import { Star, ShoppingCart, AlertCircle, Heart } from "lucide-react";
+import { Star, ShoppingCart, AlertCircle, Heart, Tag } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { formatPrice } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { useCartContext } from "@/context/CartContext";
 import { useFavorites } from "@/context/FavoritesContext";
 import { useToast } from "@/components/ui/use-toast";
+import { getDealForProduct } from "@/lib/deals";
 
 interface ProductCardProduct {
   id: string;
@@ -48,6 +49,7 @@ export default function ProductCard({ product, index = 0 }: ProductCardProps) {
   const { isFavorited, toggleFavorite } = useFavorites();
   const { toast } = useToast();
   const favorited = isFavorited(product.id);
+  const deal = getDealForProduct(product as any);
 
   const handleToggleFavorite = async (e: React.MouseEvent) => {
     e.preventDefault();
@@ -106,6 +108,7 @@ export default function ProductCard({ product, index = 0 }: ProductCardProps) {
             <div className="flex h-full items-center justify-center">
               <div className="text-emerald-900/40">
                 <svg
+                  aria-hidden="true"
                   width="56"
                   height="56"
                   viewBox="0 0 24 24"
@@ -132,6 +135,16 @@ export default function ProductCard({ product, index = 0 }: ProductCardProps) {
             </div>
           )}
 
+          {/* Deal badge */}
+          {deal && (
+            <div className="absolute left-0 right-0 bottom-0 z-10">
+              <div className="flex items-center justify-center gap-1 bg-amber-500 px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-black">
+                <Tag className="h-3 w-3" />
+                {deal.badgeText}
+              </div>
+            </div>
+          )}
+
           {/* Strain badge */}
           {product.strainType && (
             <div className="absolute left-2 top-2">
@@ -149,8 +162,8 @@ export default function ProductCard({ product, index = 0 }: ProductCardProps) {
           {/* Favorite heart */}
           <button
             onClick={handleToggleFavorite}
-            className="absolute right-1.5 top-1.5 flex h-10 w-10 items-center justify-center rounded-full bg-black/40 text-white backdrop-blur-sm transition-colors hover:bg-black/60"
-            aria-label={favorited ? "Remove from favorites" : "Add to favorites"}
+            className="absolute right-1.5 top-1.5 flex h-10 w-10 items-center justify-center rounded-full bg-black/40 text-white backdrop-blur-sm transition-colors hover:bg-black/60 focus-visible:outline-2 focus-visible:outline-white focus-visible:outline-offset-2"
+            aria-label={favorited ? `Remove ${product.name} from favorites` : `Add ${product.name} to favorites`}
             aria-pressed={favorited}
           >
             <Heart

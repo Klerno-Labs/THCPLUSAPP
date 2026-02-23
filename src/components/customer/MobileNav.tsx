@@ -18,7 +18,7 @@ export function MobileNav() {
   const { totalItems } = useCartContext();
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-40 md:hidden border-t border-border/50 bg-background/90 backdrop-blur-lg safe-area-pb">
+    <nav aria-label="Mobile navigation" className="fixed bottom-0 left-0 right-0 z-40 md:hidden border-t border-border/50 bg-background/90 backdrop-blur-lg safe-area-pb">
       <div className="flex items-center justify-around h-16 px-2">
         {navItems.map((item) => {
           const isActive =
@@ -31,8 +31,10 @@ export function MobileNav() {
             <Link
               key={item.href}
               href={item.href}
+              aria-current={isActive ? "page" : undefined}
+              aria-label={item.href === "/cart" && totalItems > 0 ? `${item.label}, ${totalItems} items` : item.label}
               className={cn(
-                "flex flex-col items-center gap-1 px-3 py-1.5 rounded-lg transition-colors relative",
+                "flex flex-col items-center gap-1 px-3 py-1.5 rounded-lg transition-colors relative focus-visible:outline-2 focus-visible:outline-emerald-500 focus-visible:outline-offset-2",
                 isActive
                   ? "text-emerald-400"
                   : "text-muted-foreground hover:text-foreground"

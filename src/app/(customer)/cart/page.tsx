@@ -21,6 +21,7 @@ import {
   LogIn,
   UserPlus,
   CheckCircle2,
+  Tag,
 } from "lucide-react";
 import { formatPrice } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -28,6 +29,7 @@ import { Input } from "@/components/ui/input";
 import { useCartContext } from "@/context/CartContext";
 import { useToast } from "@/components/ui/use-toast";
 import FadeIn from "@/components/customer/FadeIn";
+import { getDealForProduct } from "@/lib/deals";
 
 const ACTIVE_ORDER_KEY = "thcplus-active-order";
 
@@ -36,7 +38,7 @@ type CheckoutMode = "logged-in" | "guest" | "choosing";
 export default function CartPage() {
   const router = useRouter();
   const { data: session, status } = useSession();
-  const { items, totalItems, totalPrice, updateQuantity, removeItem, clearCart } =
+  const { items, totalItems, totalPrice, savings, dealDiscounts, updateQuantity, removeItem, clearCart } =
     useCartContext();
   const { toast } = useToast();
 
@@ -204,7 +206,9 @@ export default function CartPage() {
             <FadeIn>
               <div className="space-y-3">
                 <AnimatePresence mode="popLayout">
-                  {items.map((item) => (
+                  {items.map((item) => {
+                    const deal = getDealForProduct(item.product as any);
+                    return (
                     <motion.div
                       key={item.productId}
                       layout
@@ -250,6 +254,12 @@ export default function CartPage() {
                           ) : (
                             <p className="mt-0.5 text-xs text-zinc-500">
                               Price at pickup
+                            </p>
+                          )}
+                          {deal && (
+                            <p className="mt-1 flex items-center gap-1 text-[11px] font-semibold text-amber-400">
+                              <Tag className="h-3 w-3" />
+                              {deal.shortLabel}
                             </p>
                           )}
                         </div>
@@ -312,7 +322,8 @@ export default function CartPage() {
                         </div>
                       </div>
                     </motion.div>
-                  ))}
+                    );
+                  })}
                 </AnimatePresence>
               </div>
             </FadeIn>
@@ -331,7 +342,7 @@ export default function CartPage() {
                   <div className="space-y-2 border-b border-emerald-900/30 pb-4">
                     <div className="flex justify-between text-sm">
                       <span className="text-zinc-400">
-                        Items ({totalItems})
+                        Subtotal ({totalItems} item{totalItems !== 1 ? "s" : ""})
                       </span>
                       {totalPrice > 0 ? (
                         <span className="text-white">
@@ -343,6 +354,17 @@ export default function CartPage() {
                         </span>
                       )}
                     </div>
+                    {dealDiscounts.map((d) => (
+                      <div key={d.dealId} className="flex items-center justify-between text-sm">
+                        <span className="flex items-center gap-1.5 text-amber-400">
+                          <Tag className="h-3.5 w-3.5" />
+                          {d.label}
+                        </span>
+                        <span className="font-semibold text-amber-400">
+                          &minus;{formatPrice(d.savings)}
+                        </span>
+                      </div>
+                    ))}
                   </div>
 
                   {totalPrice > 0 && (
@@ -351,7 +373,7 @@ export default function CartPage() {
                         Estimated Total
                       </span>
                       <span className="text-lg font-bold text-gold">
-                        {formatPrice(totalPrice)}
+                        {formatPrice(totalPrice - savings)}
                       </span>
                     </div>
                   )}
@@ -478,6 +500,7 @@ export default function CartPage() {
                     <div className="mb-4 flex items-center gap-2">
                       <button
                         onClick={() => setCheckoutMode("choosing")}
+                        aria-label="Back to checkout options"
                         className="rounded-lg p-1 text-zinc-500 hover:text-zinc-300"
                       >
                         <ArrowLeft className="h-4 w-4" />
@@ -488,12 +511,13 @@ export default function CartPage() {
                     </div>
                     <div className="space-y-3">
                       <div>
-                        <label className="mb-1 block text-xs font-medium text-zinc-400">
+                        <label htmlFor="guest-name" className="mb-1 block text-xs font-medium text-zinc-400">
                           Full Name *
                         </label>
                         <div className="relative">
-                          <UserIcon className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-500" />
+                          <UserIcon className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-500" aria-hidden="true" />
                           <Input
+                            id="guest-name"
                             value={guestName}
                             onChange={(e) => {
                               setGuestName(e.target.value);
@@ -501,21 +525,25 @@ export default function CartPage() {
                             }}
                             placeholder="Your full name"
                             className="pl-9"
+                            aria-required="true"
+                            aria-invalid={!!errors.name}
+                            aria-describedby={errors.name ? "guest-name-error" : undefined}
                           />
                         </div>
                         {errors.name && (
-                          <p className="mt-1 text-xs text-red-400">
+                          <p id="guest-name-error" role="alert" className="mt-1 text-xs text-red-400">
                             {errors.name}
                           </p>
                         )}
                       </div>
                       <div>
-                        <label className="mb-1 block text-xs font-medium text-zinc-400">
+                        <label htmlFor="guest-phone" className="mb-1 block text-xs font-medium text-zinc-400">
                           Phone Number *
                         </label>
                         <div className="relative">
-                          <Phone className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-500" />
+                          <Phone className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-500" aria-hidden="true" />
                           <Input
+                            id="guest-phone"
                             value={guestPhone}
                             onChange={(e) => {
                               setGuestPhone(e.target.value);
@@ -524,14 +552,17 @@ export default function CartPage() {
                             placeholder="+1 (346) 555-1234"
                             type="tel"
                             className="pl-9"
+                            aria-required="true"
+                            aria-invalid={!!errors.phone}
+                            aria-describedby={errors.phone ? "guest-phone-error" : "guest-phone-hint"}
                           />
                         </div>
                         {errors.phone && (
-                          <p className="mt-1 text-xs text-red-400">
+                          <p id="guest-phone-error" role="alert" className="mt-1 text-xs text-red-400">
                             {errors.phone}
                           </p>
                         )}
-                        <p className="mt-1 text-[10px] text-zinc-600">
+                        <p id="guest-phone-hint" className="mt-1 text-[10px] text-zinc-600">
                           We&apos;ll text you when your order is ready for pickup
                         </p>
                       </div>
@@ -572,7 +603,7 @@ export default function CartPage() {
           <div className="min-w-0">
             <p className="text-xs text-zinc-400">{totalItems} item{totalItems !== 1 ? "s" : ""}</p>
             {totalPrice > 0 && (
-              <p className="text-base font-bold text-gold">{formatPrice(totalPrice)}</p>
+              <p className="text-base font-bold text-gold">{formatPrice(totalPrice - savings)}</p>
             )}
           </div>
           <Button

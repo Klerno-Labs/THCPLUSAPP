@@ -6,7 +6,7 @@ export default function robots(): MetadataRoute.Robots {
       {
         userAgent: "*",
         allow: "/",
-        disallow: ["/admin/", "/api/", "/auth/"],
+        disallow: ["/admin/", "/api/"],
       },
     ],
     sitemap: "https://order.thcplus.com/sitemap.xml",

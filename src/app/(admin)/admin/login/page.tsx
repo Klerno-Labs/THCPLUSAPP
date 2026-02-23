@@ -99,10 +99,11 @@ export default function AdminLoginPage() {
               <motion.div
                 initial={{ opacity: 0, height: 0 }}
                 animate={{ opacity: 1, height: "auto" }}
+                role="alert"
                 className="flex items-start gap-3 rounded-lg border border-red-500/20 bg-red-950/30 p-3"
               >
-                <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-red-400" />
-                <p className="text-sm text-red-400">{error}</p>
+                <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-red-400" aria-hidden="true" />
+                <p id="login-error" className="text-sm text-red-400">{error}</p>
               </motion.div>
             )}
 
@@ -128,6 +129,8 @@ export default function AdminLoginPage() {
                   className="pl-10"
                   autoComplete="email"
                   autoFocus
+                  aria-required="true"
+                  aria-describedby={error ? "login-error" : undefined}
                 />
               </div>
             </div>
@@ -153,12 +156,14 @@ export default function AdminLoginPage() {
                   placeholder="Enter your password"
                   className="pl-10 pr-10"
                   autoComplete="current-password"
+                  aria-required="true"
+                  aria-describedby={error ? "login-error" : undefined}
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
+                  aria-label={showPassword ? "Hide password" : "Show password"}
                   className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-zinc-300"
-                  tabIndex={-1}
                 >
                   {showPassword ? (
                     <EyeOff className="h-4 w-4" />

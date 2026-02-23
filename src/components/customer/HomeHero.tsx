@@ -144,9 +144,9 @@ export default function HomeHero({ banners }: HomeHeroProps) {
                     {item.step}
                   </span>
                 </div>
-                <h3 className="text-sm font-semibold text-white sm:text-base">
+                <h2 className="text-sm font-semibold text-white sm:text-base">
                   {item.title}
-                </h3>
+                </h2>
                 <p className="mt-0.5 text-[11px] text-zinc-500 sm:text-xs">
                   {item.desc}
                 </p>

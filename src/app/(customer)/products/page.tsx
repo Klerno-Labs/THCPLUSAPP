@@ -1,7 +1,23 @@
+import type { Metadata } from "next";
 import { db } from "@/lib/db";
 import ProductsGrid from "@/components/customer/ProductsGrid";
 
 export const dynamic = "force-dynamic";
+
+export const metadata: Metadata = {
+  title: "Menu",
+  description:
+    "Browse premium THCA flower, concentrates, pre-rolls, and edibles at THC Plus Houston. Reserve products for will-call pickup -- no payment online.",
+  openGraph: {
+    title: "Menu | THC Plus Houston",
+    description:
+      "Browse premium THCA flower, concentrates, pre-rolls, and edibles. Reserve for will-call pickup at THC Plus Houston.",
+    url: "https://order.thcplus.com/products",
+  },
+  alternates: {
+    canonical: "https://order.thcplus.com/products",
+  },
+};
 
 interface ProductsPageProps {
   searchParams: { category?: string };

@@ -18,6 +18,7 @@ import {
   Bell,
   BellOff,
   Loader2,
+  Tag,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { formatPrice } from "@/lib/utils";
@@ -29,6 +30,7 @@ import { useFavorites } from "@/context/FavoritesContext";
 import { useSession } from "next-auth/react";
 import FadeIn from "./FadeIn";
 import ShareButton from "./ShareButton";
+import { getDealForProduct } from "@/lib/deals";
 
 interface Review {
   id: string;
@@ -104,6 +106,7 @@ export default function ProductDetailClient({
   const [localReviews, setLocalReviews] = useState<Review[]>(product.reviews);
 
   const favorited = isFavorited(product.id);
+  const deal = getDealForProduct(product as any);
 
   // Stock alert state
   const [stockAlertSubscribed, setStockAlertSubscribed] = useState(false);
@@ -323,6 +326,15 @@ export default function ProductDetailClient({
                   </div>
                 </div>
               )}
+
+              {deal && (
+                <div className="absolute left-0 right-0 bottom-0 z-10">
+                  <div className="flex items-center justify-center gap-1.5 bg-amber-500 px-3 py-2 text-sm font-bold uppercase tracking-wide text-black">
+                    <Tag className="h-4 w-4" />
+                    {deal.badgeText}
+                  </div>
+                </div>
+              )}
             </div>
           </FadeIn>
 
@@ -415,6 +427,21 @@ export default function ProductDetailClient({
                   {formatPrice(product.price)}
                 </span>
               </div>
+
+              {/* Deal banner */}
+              {deal && (
+                <div className="mt-3 flex items-center gap-2.5 rounded-xl border border-amber-600/30 bg-amber-500/10 px-4 py-3">
+                  <Tag className="h-5 w-5 flex-shrink-0 text-amber-400" />
+                  <div>
+                    <p className="text-sm font-bold text-amber-300">
+                      {deal.label}
+                    </p>
+                    <p className="mt-0.5 text-xs text-amber-400/70">
+                      {deal.description}
+                    </p>
+                  </div>
+                </div>
+              )}
 
               {/* Product info pills */}
               <div className="mt-6 flex flex-wrap gap-3">

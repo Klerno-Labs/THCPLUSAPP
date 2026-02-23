@@ -163,10 +163,11 @@ export default function ProductsGrid({
           <div className="flex items-center gap-3">
             {/* Search input */}
             <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-500" />
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-500" aria-hidden="true" />
               <Input
-                type="text"
+                type="search"
                 placeholder="Search products..."
+                aria-label="Search products"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 className="pl-9"
@@ -174,9 +175,10 @@ export default function ProductsGrid({
               {search && (
                 <button
                   onClick={() => setSearch("")}
+                  aria-label="Clear search"
                   className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-zinc-300"
                 >
-                  <X className="h-4 w-4" />
+                  <X className="h-4 w-4" aria-hidden="true" />
                 </button>
               )}
             </div>
@@ -367,32 +369,32 @@ export default function ProductsGrid({
             {selectedCategory && (
               <Badge variant="outline" className="gap-1 text-xs">
                 {categories.find((c) => c.slug === selectedCategory)?.nameEn}
-                <button onClick={() => setSelectedCategory("")}>
-                  <X className="h-3 w-3" />
+                <button onClick={() => setSelectedCategory("")} aria-label={`Remove ${categories.find((c) => c.slug === selectedCategory)?.nameEn} filter`}>
+                  <X className="h-3 w-3" aria-hidden="true" />
                 </button>
               </Badge>
             )}
             {selectedStrain && (
               <Badge variant="outline" className="gap-1 text-xs">
                 {selectedStrain}
-                <button onClick={() => setSelectedStrain("")}>
-                  <X className="h-3 w-3" />
+                <button onClick={() => setSelectedStrain("")} aria-label={`Remove ${selectedStrain} filter`}>
+                  <X className="h-3 w-3" aria-hidden="true" />
                 </button>
               </Badge>
             )}
             {selectedPriceRange >= 0 && (
               <Badge variant="outline" className="gap-1 text-xs">
                 {priceRanges[selectedPriceRange].label}
-                <button onClick={() => setSelectedPriceRange(-1)}>
-                  <X className="h-3 w-3" />
+                <button onClick={() => setSelectedPriceRange(-1)} aria-label={`Remove ${priceRanges[selectedPriceRange].label} price filter`}>
+                  <X className="h-3 w-3" aria-hidden="true" />
                 </button>
               </Badge>
             )}
             {inStockOnly && (
               <Badge variant="outline" className="gap-1 text-xs">
                 In Stock
-                <button onClick={() => setInStockOnly(false)}>
-                  <X className="h-3 w-3" />
+                <button onClick={() => setInStockOnly(false)} aria-label="Remove in stock filter">
+                  <X className="h-3 w-3" aria-hidden="true" />
                 </button>
               </Badge>
             )}
@@ -402,7 +404,7 @@ export default function ProductsGrid({
 
       {/* Results count */}
       <div className="mx-auto max-w-7xl px-4 pt-4 sm:px-6">
-        <p className="text-sm text-zinc-500">
+        <p className="text-sm text-zinc-500" role="status" aria-live="polite" aria-atomic="true">
           {filteredProducts.length} product
           {filteredProducts.length !== 1 ? "s" : ""} found
         </p>

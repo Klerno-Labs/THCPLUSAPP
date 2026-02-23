@@ -3,6 +3,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from "react";
 import type { CartItem, Cart } from "@/types/app.types";
 import type { Product } from "@prisma/client";
+import { calculateCartDeals, type DealDiscount } from "@/lib/deals";
 
 const CART_KEY = "thcplus-cart";
 
@@ -17,6 +18,10 @@ interface CartContextValue {
   items: CartItem[];
   totalItems: number;
   totalPrice: number;
+  /** Total savings from active deals (e.g. Buy 2 Get 1 Free) */
+  savings: number;
+  /** Breakdown of applied deal discounts */
+  dealDiscounts: DealDiscount[];
   isLoaded: boolean;
   addItem: (product: Product, quantity?: number) => void;
   removeItem: (productId: string) => void;
@@ -103,6 +108,19 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     [items]
   );
 
+  const dealDiscounts = useMemo(
+    () => calculateCartDeals(items.map((item) => ({
+      quantity: item.quantity,
+      product: item.product as any,
+    }))),
+    [items]
+  );
+
+  const savings = useMemo(
+    () => dealDiscounts.reduce((sum, d) => sum + d.savings, 0),
+    [dealDiscounts]
+  );
+
   const cart: Cart = useMemo(
     () => ({ items, totalItems }),
     [items, totalItems]
@@ -114,13 +132,15 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       items,
       totalItems,
       totalPrice,
+      savings,
+      dealDiscounts,
       isLoaded,
       addItem,
       removeItem,
       updateQuantity,
       clearCart,
     }),
-    [cart, items, totalItems, totalPrice, isLoaded, addItem, removeItem, updateQuantity, clearCart]
+    [cart, items, totalItems, totalPrice, savings, dealDiscounts, isLoaded, addItem, removeItem, updateQuantity, clearCart]
   );
 
   return (
