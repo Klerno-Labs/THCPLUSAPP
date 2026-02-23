@@ -132,6 +132,21 @@ export default function CustomerLayout({
         {children}
       </main>
 
+      {/* Footer */}
+      <footer className="border-t border-emerald-900/20 bg-[#090F09] pb-20 sm:pb-0">
+        <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-6 sm:px-6">
+          <p className="text-xs text-zinc-600">
+            &copy; {new Date().getFullYear()} THC Plus. All rights reserved.
+          </p>
+          <Link
+            href="/admin/login"
+            className="text-xs text-zinc-600 transition-colors hover:text-zinc-400"
+          >
+            Staff Login
+          </Link>
+        </div>
+      </footer>
+
       {/* AI Budtender Chat Widget */}
       <AiChatbot />
 
