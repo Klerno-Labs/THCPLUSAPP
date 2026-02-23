@@ -4,6 +4,13 @@ import { prisma } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
 
+/** Parse weight string like "3.5g" or "1g" into grams */
+function parseGrams(weight: string | null): number | null {
+  if (!weight) return null;
+  const match = weight.match(/([\d.]+)\s*g/i);
+  return match ? parseFloat(match[1]) : null;
+}
+
 // ─── GET: Inventory Dashboard (Owner Only) ──────────────
 export async function GET() {
   try {
@@ -37,11 +44,19 @@ export async function GET() {
           ? Math.round((totalRetailValue - totalCostValue) * 100) / 100
           : null;
 
+      const gramsPerUnit = parseGrams(p.weight);
+      const totalGrams =
+        gramsPerUnit != null
+          ? Math.round(gramsPerUnit * p.quantity * 100) / 100
+          : null;
+
       return {
         id: p.id,
         name: p.name,
         category: p.category.nameEn,
         quantity: p.quantity,
+        gramsPerUnit,
+        totalGrams,
         price: p.price,
         costPrice: p.costPrice,
         margin,
@@ -59,6 +74,10 @@ export async function GET() {
     // Summary KPIs
     const totalProducts = products.length;
     const totalUnits = products.reduce((sum, p) => sum + p.quantity, 0);
+    const totalGrams = products.reduce((sum, p) => {
+      const g = parseGrams(p.weight);
+      return sum + (g != null ? g * p.quantity : 0);
+    }, 0);
     const totalRetailValue = products.reduce(
       (sum, p) => sum + p.price * p.quantity,
       0
@@ -89,6 +108,7 @@ export async function GET() {
       summary: {
         totalProducts,
         totalUnits,
+        totalGrams: Math.round(totalGrams * 100) / 100,
         totalRetailValue: Math.round(totalRetailValue * 100) / 100,
         totalCostValue: Math.round(totalCostValue * 100) / 100,
         totalPotentialProfit,

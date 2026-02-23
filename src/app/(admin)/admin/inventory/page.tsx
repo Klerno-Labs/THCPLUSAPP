@@ -35,6 +35,8 @@ interface InventoryProduct {
   name: string;
   category: string;
   quantity: number;
+  gramsPerUnit: number | null;
+  totalGrams: number | null;
   price: number;
   costPrice: number | null;
   margin: number | null;
@@ -51,6 +53,7 @@ interface InventoryProduct {
 interface Summary {
   totalProducts: number;
   totalUnits: number;
+  totalGrams: number;
   totalRetailValue: number;
   totalCostValue: number;
   totalPotentialProfit: number | null;
@@ -103,7 +106,7 @@ interface OrderBreakdown {
 }
 
 type Tab = "stock" | "sales";
-type SortField = "name" | "quantity" | "price" | "costPrice" | "margin" | "totalProfit";
+type SortField = "name" | "quantity" | "totalGrams" | "price" | "costPrice" | "margin" | "totalProfit";
 type SalesSortField = "name" | "unitsSold" | "revenue" | "profit" | "margin";
 type StockFilter = "all" | "inStock" | "lowStock" | "outOfStock";
 type DateRange = "today" | "7d" | "30d" | "90d" | "all";
@@ -111,6 +114,8 @@ type DateRange = "today" | "7d" | "30d" | "90d" | "all";
 // ─── Formatters ─────────────────────────────────────────
 const fmt = (n: number) =>
   n.toLocaleString("en-US", { style: "currency", currency: "USD" });
+
+const fmtG = (g: number) => (g >= 1000 ? `${(g / 1000).toFixed(2)}kg` : `${g}g`);
 
 const fmtDate = (iso: string) => {
   const d = new Date(iso);
@@ -396,6 +401,10 @@ export default function InventoryPage() {
           aVal = a.quantity;
           bVal = b.quantity;
           break;
+        case "totalGrams":
+          aVal = a.totalGrams ?? 0;
+          bVal = b.totalGrams ?? 0;
+          break;
         case "price":
           aVal = a.price;
           bVal = b.price;
@@ -613,9 +622,9 @@ export default function InventoryPage() {
             <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
               <KpiCard
                 icon={Warehouse}
-                label="Total Units"
-                value={summary.totalUnits.toLocaleString()}
-                sub={`${summary.totalProducts} products`}
+                label="Total Stock"
+                value={fmtG(summary.totalGrams)}
+                sub={`${summary.totalUnits} units across ${summary.totalProducts} products`}
                 color="bg-emerald-600"
                 delay={0}
               />
@@ -723,7 +732,10 @@ export default function InventoryPage() {
                     Category
                   </th>
                   <th className="px-3 py-3 text-right">
-                    <SortHeader field="quantity">Qty</SortHeader>
+                    <SortHeader field="quantity">Units</SortHeader>
+                  </th>
+                  <th className="px-3 py-3 text-right">
+                    <SortHeader field="totalGrams">Grams</SortHeader>
                   </th>
                   <th className="px-3 py-3 text-right">
                     <SortHeader field="costPrice">Cost</SortHeader>
@@ -763,6 +775,9 @@ export default function InventoryPage() {
                     <td className="px-3 py-3 text-zinc-400">{p.category}</td>
                     <td className="px-3 py-3 text-right font-mono text-white">
                       {p.quantity}
+                    </td>
+                    <td className="px-3 py-3 text-right font-mono text-emerald-400">
+                      {p.totalGrams != null ? fmtG(p.totalGrams) : "—"}
                     </td>
                     <td className="px-3 py-3 text-right font-mono text-zinc-400">
                       {p.costPrice != null ? fmt(p.costPrice) : "—"}
@@ -813,7 +828,7 @@ export default function InventoryPage() {
                 ))}
                 {filtered.length === 0 && (
                   <tr>
-                    <td colSpan={8} className="px-4 py-8 text-center text-zinc-500">
+                    <td colSpan={9} className="px-4 py-8 text-center text-zinc-500">
                       No products match your filters.
                     </td>
                   </tr>
