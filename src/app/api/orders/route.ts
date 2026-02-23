@@ -4,6 +4,7 @@ import { prisma } from "@/lib/db";
 import { createOrderSchema } from "@/lib/validations";
 import { generateOrderNumber } from "@/lib/utils";
 import { getPusherServer, CHANNELS, EVENTS } from "@/lib/pusher";
+import { scoreOrderInternal } from "@/lib/ai-scoring";
 import type { OrderCreatedEvent } from "@/types/app.types";
 
 export const dynamic = "force-dynamic";
@@ -163,8 +164,17 @@ export async function POST(request: NextRequest) {
         },
       });
 
-      // ── Decrement inventory for each ordered product ──
+      // ── Verify stock sufficiency and decrement inventory ──
       for (const item of items) {
+        const currentProduct = await tx.product.findUnique({
+          where: { id: item.productId },
+          select: { quantity: true, name: true },
+        });
+        if (!currentProduct || currentProduct.quantity < item.quantity) {
+          throw new Error(
+            `Insufficient stock for ${currentProduct?.name || item.productId}. Available: ${currentProduct?.quantity ?? 0}, requested: ${item.quantity}`
+          );
+        }
         const updatedProduct = await tx.product.update({
           where: { id: item.productId },
           data: { quantity: { decrement: item.quantity } },
@@ -206,30 +216,29 @@ export async function POST(request: NextRequest) {
         .catch((err) => console.error("Pusher trigger failed:", err));
     }
 
-    // ── Trigger AI scoring (fire and forget) ──
-    const baseUrl =
-      process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
-
-    fetch(`${baseUrl}/api/ai/score-order`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "x-internal-call": "true" },
-      body: JSON.stringify({
-        orderId: order.id,
-        items: order.items.map((item) => ({
-          productName: item.product.name,
-          quantity: item.quantity,
-          price: item.unitPriceAtOrder,
-        })),
-        customerTier: order.customer?.loyaltyTier || null,
-        createdAt: order.createdAt.toISOString(),
-        expiresAt: order.expiresAt?.toISOString() || null,
-      }),
+    // ── Trigger AI scoring (direct function call, fire and forget) ──
+    scoreOrderInternal({
+      orderId: order.id,
+      items: order.items.map((item) => ({
+        productName: item.product.name,
+        quantity: item.quantity,
+        price: item.unitPriceAtOrder,
+      })),
+      customerTier: order.customer?.loyaltyTier || null,
+      createdAt: order.createdAt.toISOString(),
+      expiresAt: order.expiresAt?.toISOString() || null,
     }).catch((err) => {
-      console.error("AI scoring trigger failed:", err);
+      console.error("AI scoring failed:", err);
     });
 
     return NextResponse.json(order, { status: 201 });
-  } catch (error) {
+  } catch (error: any) {
+    if (error?.message?.startsWith("Insufficient stock")) {
+      return NextResponse.json(
+        { error: error.message },
+        { status: 400 }
+      );
+    }
     console.error("POST /api/orders error:", error);
     return NextResponse.json(
       { error: "Failed to create order" },

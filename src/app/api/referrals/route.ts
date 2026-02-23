@@ -136,15 +136,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Check if referral code has reached its maximum uses (cap of 20)
-    const referralCount = await prisma.referral.count({ where: { referrerId: referrer.id } });
-    if (referralCount >= 20) {
-      return NextResponse.json(
-        { error: "This referral code has reached its maximum uses" },
-        { status: 400 }
-      );
-    }
-
     // Cannot refer yourself
     if (referrer.id === userId) {
       return NextResponse.json(
@@ -169,6 +160,12 @@ export async function POST(request: NextRequest) {
 
     // Atomic transaction: create referral + award points to both users
     await prisma.$transaction(async (tx) => {
+      // Check referral cap inside transaction to prevent race condition
+      const referralCount = await tx.referral.count({ where: { referrerId: referrer.id } });
+      if (referralCount >= 20) {
+        throw new Error("REFERRAL_CAP_REACHED");
+      }
+
       // Create the referral record
       await tx.referral.create({
         data: {
@@ -217,6 +214,12 @@ export async function POST(request: NextRequest) {
       pointsAwarded: POINTS_AWARDED,
     });
   } catch (error: any) {
+    if (error?.message === "REFERRAL_CAP_REACHED") {
+      return NextResponse.json(
+        { error: "This referral code has reached its maximum uses" },
+        { status: 400 }
+      );
+    }
     if (error?.code === "P2002") {
       return NextResponse.json(
         { error: "You have already used a referral code" },
