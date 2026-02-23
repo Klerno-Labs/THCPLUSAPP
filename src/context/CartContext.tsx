@@ -50,9 +50,49 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   const [items, setItems] = useState<CartItem[]>([]);
   const [isLoaded, setIsLoaded] = useState(false);
 
+  // Load cart from localStorage, then hydrate with fresh product data from API
   useEffect(() => {
-    setItems(loadCart());
+    const stored = loadCart();
+    setItems(stored);
     setIsLoaded(true);
+
+    // Hydrate: fetch fresh product data so prices are always current
+    if (stored.length > 0) {
+      const productIds = stored.map((item) => item.productId);
+      Promise.all(
+        productIds.map((id) =>
+          fetch(`/api/products/${id}`)
+            .then((res) => (res.ok ? res.json() : null))
+            .catch(() => null)
+        )
+      ).then((freshProducts) => {
+        const productMap = new Map<string, any>();
+        for (const p of freshProducts) {
+          if (p && p.id) productMap.set(p.id, p);
+        }
+        if (productMap.size > 0) {
+          setItems((prev) =>
+            prev
+              .map((item) => {
+                const fresh = productMap.get(item.productId);
+                if (!fresh) return item; // keep stale data if fetch failed
+                return {
+                  ...item,
+                  product: {
+                    ...item.product,
+                    ...fresh,
+                    price: Number(fresh.price),
+                  },
+                };
+              })
+              .filter((item) => {
+                // Remove items whose products no longer exist
+                return productMap.has(item.productId) || !productMap.size;
+              })
+          );
+        }
+      });
+    }
   }, []);
 
   useEffect(() => {
