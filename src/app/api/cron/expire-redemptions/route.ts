@@ -34,11 +34,14 @@ export async function GET(request: NextRequest) {
     // ── Expire each redemption and refund points ──
     for (const redemption of expiredRedemptions) {
       await prisma.$transaction(async (tx) => {
-        // Update redemption status to EXPIRED
-        await tx.redemption.update({
-          where: { id: redemption.id },
+        // Update redemption status to EXPIRED only if still PENDING (guard against race condition)
+        const updated = await tx.redemption.updateMany({
+          where: { id: redemption.id, status: "PENDING" },
           data: { status: "EXPIRED" },
         });
+
+        // If already fulfilled or cancelled, skip the refund
+        if (updated.count === 0) return;
 
         // Refund points to customer
         await tx.profile.update({

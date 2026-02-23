@@ -24,6 +24,23 @@ export async function POST(request: NextRequest) {
     const { items, customerId, guestName, guestPhone, guestSessionId } =
       parsed.data;
 
+    // ── Auth check: if customerId is provided, verify it matches the session ──
+    if (customerId) {
+      const session = await auth();
+      if (!session?.user) {
+        return NextResponse.json(
+          { error: "Authentication required for customer orders" },
+          { status: 401 }
+        );
+      }
+      if ((session.user as any).id !== customerId) {
+        return NextResponse.json(
+          { error: "Forbidden: customerId does not match authenticated user" },
+          { status: 403 }
+        );
+      }
+    }
+
     // Determine phone number for rate limiting
     let phone: string | null = null;
     if (customerId) {
@@ -37,6 +54,7 @@ export async function POST(request: NextRequest) {
     }
 
     // ── Rate Limit: max 3 orders per phone per hour (graceful when KV not configured) ──
+    let rateLimited = false;
     if (phone) {
       try {
         const { kv } = await import("@vercel/kv");
@@ -59,8 +77,26 @@ export async function POST(request: NextRequest) {
         } else {
           await kv.incr(rateLimitKey);
         }
+        rateLimited = true;
       } catch {
-        // KV not configured — skip rate limiting
+        // KV not configured — fall through to in-memory rate limiting
+      }
+    }
+
+    if (!rateLimited) {
+      // In-memory fallback rate limit
+      const g = globalThis as unknown as { __orderRateLimit?: Map<string, { count: number; resetAt: number }> };
+      if (!g.__orderRateLimit) g.__orderRateLimit = new Map();
+      const key = customerId || guestPhone || 'unknown';
+      const entry = g.__orderRateLimit.get(key);
+      const now = Date.now();
+      if (entry && entry.resetAt > now && entry.count >= 5) {
+        return NextResponse.json({ error: "Too many orders. Please try again later." }, { status: 429 });
+      }
+      if (!entry || entry.resetAt <= now) {
+        g.__orderRateLimit.set(key, { count: 1, resetAt: now + 60000 });
+      } else {
+        entry.count++;
       }
     }
 
@@ -126,6 +162,20 @@ export async function POST(request: NextRequest) {
           guestSession: true,
         },
       });
+
+      // ── Decrement inventory for each ordered product ──
+      for (const item of items) {
+        const updatedProduct = await tx.product.update({
+          where: { id: item.productId },
+          data: { quantity: { decrement: item.quantity } },
+        });
+        if (updatedProduct.quantity <= 0) {
+          await tx.product.update({
+            where: { id: item.productId },
+            data: { inStock: false },
+          });
+        }
+      }
 
       // ── Create initial status history entry ──
       await tx.orderStatusHistory.create({

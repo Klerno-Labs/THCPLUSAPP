@@ -51,11 +51,11 @@ export const categorySchema = z.object({
 
 export const orderItemSchema = z.object({
   productId: z.string().min(1),
-  quantity: z.number().int().positive("Quantity must be at least 1"),
+  quantity: z.number().int().positive("Quantity must be at least 1").max(100, "Quantity cannot exceed 100"),
 });
 
 export const createOrderSchema = z.object({
-  items: z.array(orderItemSchema).min(1, "At least one item required"),
+  items: z.array(orderItemSchema).min(1, "At least one item required").max(50, "Cannot exceed 50 items per order"),
   customerId: z.string().optional(),
   guestName: z.string().min(2).max(100).optional(),
   guestPhone: z.string().regex(/^\+?[1-9]\d{9,14}$/).optional(),

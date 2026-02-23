@@ -42,7 +42,7 @@ export async function PATCH(
     }
 
     // Adjust loyalty points atomically
-    if (loyaltyAdjustment && typeof loyaltyAdjustment === "number") {
+    if (typeof loyaltyAdjustment === "number" && Number.isFinite(loyaltyAdjustment) && loyaltyAdjustment !== 0 && Math.abs(loyaltyAdjustment) <= 10000) {
       await prisma.$transaction([
         prisma.profile.update({
           where: { id: params.id },

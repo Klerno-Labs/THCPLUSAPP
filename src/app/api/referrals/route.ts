@@ -136,6 +136,15 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Check if referral code has reached its maximum uses (cap of 20)
+    const referralCount = await prisma.referral.count({ where: { referrerId: referrer.id } });
+    if (referralCount >= 20) {
+      return NextResponse.json(
+        { error: "This referral code has reached its maximum uses" },
+        { status: 400 }
+      );
+    }
+
     // Cannot refer yourself
     if (referrer.id === userId) {
       return NextResponse.json(

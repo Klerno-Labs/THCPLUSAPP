@@ -92,23 +92,20 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // ── Check no existing PENDING redemption for same reward ──
-    const existingPending = await prisma.redemption.findFirst({
-      where: {
-        customerId: (session.user as any).id,
-        rewardKey,
-        status: "PENDING",
-      },
-    });
-    if (existingPending) {
-      return NextResponse.json(
-        { error: "You already have a pending redemption for this reward" },
-        { status: 409 }
-      );
-    }
-
     // ── Create redemption in transaction (atomic points check + deduction) ──
     const redemption = await prisma.$transaction(async (tx) => {
+      // ── Check no existing PENDING redemption for same reward (inside transaction) ──
+      const existingPending = await tx.redemption.findFirst({
+        where: {
+          customerId: (session.user as any).id,
+          rewardKey,
+          status: "PENDING",
+        },
+      });
+      if (existingPending) {
+        throw new Error("DUPLICATE_PENDING");
+      }
+
       // Re-fetch profile inside transaction to prevent race condition double-spend
       const freshProfile = await tx.profile.findUnique({
         where: { id: (session.user as any).id },
@@ -154,6 +151,13 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(redemption, { status: 201 });
   } catch (error) {
+    // Handle the duplicate pending redemption check
+    if (error instanceof Error && error.message === "DUPLICATE_PENDING") {
+      return NextResponse.json(
+        { error: "You already have a pending redemption for this reward" },
+        { status: 409 }
+      );
+    }
     // Handle the atomic balance check failure gracefully
     if (error instanceof Error && error.message === "INSUFFICIENT_POINTS") {
       return NextResponse.json(

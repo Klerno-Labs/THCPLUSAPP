@@ -1,36 +1,26 @@
 import { NextRequest, NextResponse } from "next/server";
 import { hash } from "bcryptjs";
 import { prisma } from "@/lib/db";
+import { customerSignupSchema } from "@/lib/validations";
 
 export const dynamic = "force-dynamic";
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { name, phone, password, email } = body;
+    const parsed = customerSignupSchema.safeParse(body);
 
-    if (!name || !phone || !password) {
+    if (!parsed.success) {
       return NextResponse.json(
-        { error: "Name, phone, and password are required" },
+        { error: "Validation failed", details: parsed.error.flatten() },
         { status: 400 }
       );
     }
 
-    if (password.length < 6) {
-      return NextResponse.json(
-        { error: "Password must be at least 6 characters" },
-        { status: 400 }
-      );
-    }
+    const { name, phone, password, email } = parsed.data;
 
     // Clean phone number — digits only
     const cleanPhone = phone.replace(/\D/g, "");
-    if (cleanPhone.length < 10) {
-      return NextResponse.json(
-        { error: "Please enter a valid phone number" },
-        { status: 400 }
-      );
-    }
 
     const formattedPhone = cleanPhone.startsWith("1")
       ? `+${cleanPhone}`
