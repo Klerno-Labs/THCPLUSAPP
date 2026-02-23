@@ -36,7 +36,7 @@ function SignInForm() {
         redirect: false,
       });
 
-      if (result?.ok) {
+      if (result?.ok && !result.error) {
         router.push(callbackUrl);
         router.refresh();
       } else {

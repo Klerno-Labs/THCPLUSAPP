@@ -2,6 +2,11 @@ import { test, expect } from "@playwright/test";
 
 test.describe("Products Page", () => {
   test.beforeEach(async ({ page }) => {
+    // Bypass age gate and onboarding overlays
+    await page.addInitScript(() => {
+      localStorage.setItem("thcplus-age-verified", "true");
+      localStorage.setItem("thcplus-onboarded", "true");
+    });
     await page.goto("/products");
   });
 
@@ -167,6 +172,14 @@ test.describe("Products Page", () => {
 });
 
 test.describe("Product Detail Page", () => {
+  test.beforeEach(async ({ page }) => {
+    // Bypass age gate and onboarding overlays
+    await page.addInitScript(() => {
+      localStorage.setItem("thcplus-age-verified", "true");
+      localStorage.setItem("thcplus-onboarded", "true");
+    });
+  });
+
   test("product detail page shows all product info", async ({ page }) => {
     // First go to products page and click the first product
     await page.goto("/products");
@@ -185,7 +198,7 @@ test.describe("Product Detail Page", () => {
       await expect(productName).not.toBeEmpty();
 
       // Price should be displayed (formatted like "$XX.XX")
-      await expect(page.locator('text=/\\$\\d+/')).toBeVisible();
+      await expect(page.locator('text=/\\$\\d+/').first()).toBeVisible();
 
       // "Back to Products" link should be present
       await expect(

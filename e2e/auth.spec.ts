@@ -2,6 +2,11 @@ import { test, expect } from "@playwright/test";
 
 test.describe("Sign In Page", () => {
   test.beforeEach(async ({ page }) => {
+    // Bypass age gate and onboarding overlays
+    await page.addInitScript(() => {
+      localStorage.setItem("thcplus-age-verified", "true");
+      localStorage.setItem("thcplus-onboarded", "true");
+    });
     await page.goto("/auth/signin");
   });
 
@@ -91,15 +96,20 @@ test.describe("Sign In Page", () => {
 
     await page.getByRole("button", { name: /Sign In/i }).click();
 
-    // Should show an error message
+    // Should show an error message after failed auth attempt
     await expect(
       page.getByText(/Invalid phone number or password|Something went wrong/i)
-    ).toBeVisible({ timeout: 10000 });
+    ).toBeVisible({ timeout: 15000 });
   });
 });
 
 test.describe("Sign Up Page", () => {
   test.beforeEach(async ({ page }) => {
+    // Bypass age gate and onboarding overlays
+    await page.addInitScript(() => {
+      localStorage.setItem("thcplus-age-verified", "true");
+      localStorage.setItem("thcplus-onboarded", "true");
+    });
     await page.goto("/auth/signup");
   });
 

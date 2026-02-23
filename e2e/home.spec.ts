@@ -2,6 +2,11 @@ import { test, expect } from "@playwright/test";
 
 test.describe("Homepage", () => {
   test.beforeEach(async ({ page }) => {
+    // Bypass age gate and onboarding overlays
+    await page.addInitScript(() => {
+      localStorage.setItem("thcplus-age-verified", "true");
+      localStorage.setItem("thcplus-onboarded", "true");
+    });
     await page.goto("/");
   });
 
@@ -23,9 +28,10 @@ test.describe("Homepage", () => {
   });
 
   test("hero shows the 3-step how it works section", async ({ page }) => {
-    await expect(page.getByText("Browse")).toBeVisible();
-    await expect(page.getByText("Reserve")).toBeVisible();
-    await expect(page.getByText("Pick Up")).toBeVisible();
+    // The 3-step titles are h2 elements: "Browse", "Reserve", "Pick Up"
+    await expect(page.getByRole("heading", { name: "Browse", exact: true })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Reserve", exact: true })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Pick Up", exact: true })).toBeVisible();
   });
 
   test("navigation links work - header links are present", async ({ page }) => {

@@ -2,7 +2,11 @@ import { test, expect } from "@playwright/test";
 
 test.describe("Cart Page - Empty State", () => {
   test("empty cart shows 'No items yet' message", async ({ page }) => {
-    // Clear any existing cart state by clearing localStorage before navigation
+    // Bypass age gate and onboarding overlays
+    await page.addInitScript(() => {
+      localStorage.setItem("thcplus-age-verified", "true");
+      localStorage.setItem("thcplus-onboarded", "true");
+    });
     await page.goto("/cart");
 
     // If the cart is empty, we should see the empty state
@@ -35,8 +39,10 @@ test.describe("Cart Page - Empty State", () => {
   test("empty cart 'Browse Menu' link navigates to products", async ({
     page,
   }) => {
-    // Navigate to cart and clear localStorage to ensure empty cart
+    // Bypass age gate/onboarding and clear cart
     await page.addInitScript(() => {
+      localStorage.setItem("thcplus-age-verified", "true");
+      localStorage.setItem("thcplus-onboarded", "true");
       localStorage.removeItem("thcplus-cart");
     });
     await page.goto("/cart");
@@ -57,94 +63,98 @@ test.describe("Cart Flow - Adding Products", () => {
   test("adding a product to cart shows toast notification", async ({
     page,
   }) => {
-    // Start with a clean cart
+    // Bypass age gate/onboarding and start with clean cart
     await page.addInitScript(() => {
+      localStorage.setItem("thcplus-age-verified", "true");
+      localStorage.setItem("thcplus-onboarded", "true");
       localStorage.removeItem("thcplus-cart");
     });
 
     await page.goto("/products");
 
-    // Wait for product grid to load
-    const productGrid = page.locator(".grid.grid-cols-2");
-    const addButtons = page.getByRole("button", { name: /Add .+ to order/i });
-    const buttonCount = await addButtons.count();
+    // Wait for products to fully load from API
+    const firstAddButton = page.getByRole("button", { name: /Add .+ to order/i }).first();
+    await firstAddButton.waitFor({ state: "visible", timeout: 10000 });
 
-    if (buttonCount > 0) {
-      // Click the first "Add to order" button
-      await addButtons.first().click();
+    // Click the first "Add to order" button
+    await firstAddButton.click();
 
-      // Toast notification should appear with "Added to order"
-      await expect(page.getByText("Added to order")).toBeVisible({
-        timeout: 5000,
-      });
-    }
+    // Toast notification should appear with "Added to order"
+    await expect(page.getByText("Added to order").first()).toBeVisible({
+      timeout: 10000,
+    });
   });
 
   test("cart page shows added items after adding from products page", async ({
     page,
   }) => {
-    // Start with a clean cart
+    // Bypass age gate/onboarding (runs on every navigation)
     await page.addInitScript(() => {
-      localStorage.removeItem("thcplus-cart");
+      localStorage.setItem("thcplus-age-verified", "true");
+      localStorage.setItem("thcplus-onboarded", "true");
     });
 
+    // Navigate first, then clear cart before adding a product
     await page.goto("/products");
+    await page.evaluate(() => localStorage.removeItem("thcplus-cart"));
 
-    // Find and click the first available Add button
-    const addButtons = page.getByRole("button", { name: /Add .+ to order/i });
-    const buttonCount = await addButtons.count();
+    // Wait for product grid to load with actual products
+    const firstAddButton = page.getByRole("button", { name: /Add .+ to order/i }).first();
+    await firstAddButton.waitFor({ state: "visible", timeout: 10000 });
 
-    if (buttonCount > 0) {
-      // Get the product name from the card before clicking
-      const firstCard = page.locator(".grid.grid-cols-2 a").first();
-      const productName = await firstCard.locator("h3").textContent();
+    // Get the product name from the card before clicking
+    const firstCard = page.locator(".grid.grid-cols-2 a").first();
+    const productName = await firstCard.locator("h3").textContent();
 
-      await addButtons.first().click();
+    await firstAddButton.click();
 
-      // Wait for toast to confirm addition
-      await expect(page.getByText("Added to order")).toBeVisible({
-        timeout: 5000,
-      });
+    // Wait for toast to confirm addition
+    await expect(page.getByText("Added to order").first()).toBeVisible({
+      timeout: 10000,
+    });
 
-      // Navigate to cart
-      await page.goto("/cart");
+    // Navigate to cart
+    await page.goto("/cart");
 
-      // Cart should now show "Your Will-Call Order" heading (non-empty state)
-      await expect(
-        page.getByRole("heading", { name: /Your Will-Call Order/i })
-      ).toBeVisible();
+    // Cart should now show "Your Will-Call Order" heading (non-empty state)
+    await expect(
+      page.getByRole("heading", { name: /Your Will-Call Order/i })
+    ).toBeVisible();
 
-      // The product name should appear in the cart
-      if (productName) {
-        await expect(page.getByText(productName)).toBeVisible();
-      }
-
-      // Order Summary section should be visible
-      await expect(
-        page.getByRole("heading", { name: /Order Summary/i })
-      ).toBeVisible();
+    // The product name should appear in the cart
+    if (productName) {
+      await expect(page.getByText(productName)).toBeVisible();
     }
+
+    // Order Summary section should be visible
+    await expect(
+      page.getByRole("heading", { name: /Order Summary/i })
+    ).toBeVisible();
   });
 });
 
 test.describe("Cart Page - Item Management", () => {
   // Helper: seed a product into the cart via localStorage before each test
   test.beforeEach(async ({ page }) => {
-    // We need to add a product to cart. We do this by navigating to products,
-    // adding one, then going to cart.
+    // Bypass age gate/onboarding (runs on every navigation)
     await page.addInitScript(() => {
-      localStorage.removeItem("thcplus-cart");
+      localStorage.setItem("thcplus-age-verified", "true");
+      localStorage.setItem("thcplus-onboarded", "true");
     });
 
+    // Navigate and clear cart before adding product
     await page.goto("/products");
+    await page.evaluate(() => localStorage.removeItem("thcplus-cart"));
 
-    const addButtons = page.getByRole("button", { name: /Add .+ to order/i });
-    const buttonCount = await addButtons.count();
+    // Wait for products to fully load
+    const firstAddButton = page.getByRole("button", { name: /Add .+ to order/i }).first();
+    await firstAddButton.waitFor({ state: "visible", timeout: 10000 }).catch(() => {});
 
-    if (buttonCount > 0) {
-      await addButtons.first().click();
+    const isVisible = await firstAddButton.isVisible().catch(() => false);
+    if (isVisible) {
+      await firstAddButton.click();
       // Wait for toast
-      await page.getByText("Added to order").waitFor({ timeout: 5000 }).catch(() => {});
+      await page.getByText("Added to order").first().waitFor({ timeout: 10000 }).catch(() => {});
     }
 
     await page.goto("/cart");
@@ -224,7 +234,7 @@ test.describe("Cart Page - Item Management", () => {
       await removeButton.click();
 
       // A toast should appear confirming removal
-      await expect(page.getByText("Removed")).toBeVisible({
+      await expect(page.getByText("Removed", { exact: true })).toBeVisible({
         timeout: 5000,
       });
 
