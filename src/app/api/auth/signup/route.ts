@@ -5,6 +5,9 @@ import { customerSignupSchema } from "@/lib/validations";
 
 export const dynamic = "force-dynamic";
 
+const REFERRAL_SIGNUP_BONUS = 25; // Enough for a free pre-roll
+const REFERRER_BONUS = 10;
+
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
@@ -17,7 +20,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { name, phone, password, email } = parsed.data;
+    const { name, phone, password, email, referralCode } = parsed.data;
 
     // Clean phone number — digits only
     const cleanPhone = phone.replace(/\D/g, "");
@@ -51,18 +54,78 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // Validate referral code if provided
+    let referrer: { id: string; name: string } | null = null;
+    const trimmedCode = referralCode?.trim();
+    if (trimmedCode) {
+      const referrerProfile = await prisma.profile.findUnique({
+        where: { referralCode: trimmedCode.toUpperCase() },
+        select: { id: true, name: true },
+      });
+      if (!referrerProfile) {
+        return NextResponse.json(
+          { error: "Invalid referral code" },
+          { status: 400 }
+        );
+      }
+      referrer = referrerProfile;
+    }
+
     const hashedPassword = await hash(password, 12);
 
-    await prisma.profile.create({
+    // Create the account with bonus points if referred
+    const newUser = await prisma.profile.create({
       data: {
         name: name.trim(),
         phone: formattedPhone,
         email: email?.trim() || null,
         hashedPassword,
+        loyaltyPoints: referrer ? REFERRAL_SIGNUP_BONUS : 0,
       },
     });
 
-    return NextResponse.json({ success: true });
+    // Process referral if code was valid
+    if (referrer) {
+      await prisma.$transaction([
+        // Create referral record
+        prisma.referral.create({
+          data: {
+            referrerId: referrer.id,
+            referredId: newUser.id,
+            pointsAwarded: REFERRAL_SIGNUP_BONUS,
+          },
+        }),
+        // Log loyalty transaction for new user
+        prisma.loyaltyTransaction.create({
+          data: {
+            customerId: newUser.id,
+            points: REFERRAL_SIGNUP_BONUS,
+            type: "BONUS",
+            description: `Welcome bonus — referred by ${referrer.name}`,
+          },
+        }),
+        // Award referrer their bonus
+        prisma.profile.update({
+          where: { id: referrer.id },
+          data: { loyaltyPoints: { increment: REFERRER_BONUS } },
+        }),
+        // Log loyalty transaction for referrer
+        prisma.loyaltyTransaction.create({
+          data: {
+            customerId: referrer.id,
+            points: REFERRER_BONUS,
+            type: "BONUS",
+            description: `Referral bonus — ${name.trim()} joined`,
+          },
+        }),
+      ]);
+    }
+
+    return NextResponse.json({
+      success: true,
+      referralApplied: !!referrer,
+      bonusPoints: referrer ? REFERRAL_SIGNUP_BONUS : 0,
+    });
   } catch (error: any) {
     console.error("POST /api/auth/signup error:", error);
 

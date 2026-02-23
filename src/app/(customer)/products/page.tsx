@@ -33,28 +33,28 @@ async function getProducts() {
       orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
     });
 
-    const withRatings = await Promise.all(
-      products.map(async (product) => {
-        const agg = await db.review.aggregate({
-          where: { productId: product.id },
-          _avg: { rating: true },
-        });
-        return {
-          ...product,
-          price: Number(product.price),
-          thcPercentage: product.thcPercentage
-            ? Number(product.thcPercentage)
-            : null,
-          cbdPercentage: product.cbdPercentage
-            ? Number(product.cbdPercentage)
-            : null,
-          avgRating: agg._avg.rating ?? 0,
-        };
-      })
+    // Batch avg ratings in a single query instead of N+1 per-product calls
+    const ratings = await db.review.groupBy({
+      by: ["productId"],
+      _avg: { rating: true },
+    });
+    const ratingMap = new Map(
+      ratings.map((r) => [r.productId, r._avg.rating ?? 0])
     );
 
-    return withRatings;
-  } catch {
+    return products.map((product) => ({
+      ...product,
+      price: Number(product.price),
+      thcPercentage: product.thcPercentage
+        ? Number(product.thcPercentage)
+        : null,
+      cbdPercentage: product.cbdPercentage
+        ? Number(product.cbdPercentage)
+        : null,
+      avgRating: ratingMap.get(product.id) ?? 0,
+    }));
+  } catch (e) {
+    console.error("getProducts error:", e);
     return [];
   }
 }

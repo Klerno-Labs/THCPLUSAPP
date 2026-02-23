@@ -16,6 +16,7 @@ function SignUpForm() {
   const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [referralCode, setReferralCode] = useState("");
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
@@ -29,7 +30,13 @@ function SignUpForm() {
       const res = await fetch("/api/auth/signup", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, phone, password, email: email || undefined }),
+        body: JSON.stringify({
+          name,
+          phone,
+          password,
+          email: email || undefined,
+          referralCode: referralCode.trim() || undefined,
+        }),
       });
 
       const data = await res.json();
@@ -140,6 +147,23 @@ function SignUpForm() {
               minLength={6}
               disabled={isLoading}
             />
+          </div>
+
+          <div>
+            <label className="mb-1.5 block text-xs font-medium text-zinc-400">
+              Referral Code{" "}
+              <span className="text-zinc-600">(optional)</span>
+            </label>
+            <Input
+              value={referralCode}
+              onChange={(e) => setReferralCode(e.target.value.toUpperCase())}
+              placeholder="e.g. JOH1234"
+              disabled={isLoading}
+              maxLength={20}
+            />
+            <p className="mt-1 text-[11px] text-zinc-600">
+              Get 25 bonus points — enough for a free pre-roll!
+            </p>
           </div>
 
           <Button

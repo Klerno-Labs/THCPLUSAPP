@@ -12,6 +12,7 @@ export const customerSignupSchema = z.object({
   phone: z.string().regex(/^\+?[1-9]\d{9,14}$/, "Invalid phone number"),
   email: z.string().email("Invalid email").optional().or(z.literal("")),
   password: z.string().min(6, "Password must be at least 6 characters"),
+  referralCode: z.string().max(20).optional().or(z.literal("")),
 });
 
 export const guestSessionSchema = z.object({
