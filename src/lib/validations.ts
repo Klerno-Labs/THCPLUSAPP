@@ -28,6 +28,7 @@ export const productSchema = z.object({
   descriptionEn: z.string().max(2000).optional(),
   descriptionEs: z.string().max(2000).optional(),
   price: z.number().min(0.01, "Price must be greater than 0"),
+  costPrice: z.number().min(0).optional().nullable(),
   thcPercentage: z.number().min(0).max(100).optional(),
   cbdPercentage: z.number().min(0).max(100).optional(),
   strainType: z.enum(["SATIVA", "INDICA", "HYBRID", "CBD"]).optional(),

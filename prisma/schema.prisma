@@ -118,6 +118,7 @@ model Product {
   descriptionEn  String?    @db.Text
   descriptionEs  String?    @db.Text
   price          Float
+  costPrice      Float?
   thcPercentage  Float?
   cbdPercentage  Float?
   strainType     StrainType?

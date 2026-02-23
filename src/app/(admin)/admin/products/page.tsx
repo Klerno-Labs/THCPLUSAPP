@@ -35,6 +35,7 @@ interface Product {
   categoryId: string;
   category: Category;
   price: number;
+  costPrice: number | null;
   quantity: number;
   inStock: boolean;
   thcPercentage: number | null;
@@ -68,6 +69,7 @@ function ProductFormDialog({ product, categories, onClose, onSave }: ProductForm
     name: product?.name || "",
     categoryId: product?.categoryId || (categories[0]?.id ?? ""),
     price: product?.price?.toString() || "",
+    costPrice: product?.costPrice?.toString() || "",
     quantity: product?.quantity?.toString() || "0",
     thcPercentage: product?.thcPercentage?.toString() || "",
     cbdPercentage: product?.cbdPercentage?.toString() || "",
@@ -115,6 +117,7 @@ function ProductFormDialog({ product, categories, onClose, onSave }: ProductForm
         name: form.name,
         categoryId: form.categoryId,
         price: parseFloat(form.price) || 0,
+        costPrice: form.costPrice ? parseFloat(form.costPrice) : null,
         quantity: parseInt(form.quantity) || 0,
         inStock: form.inStock,
         thcPercentage: form.thcPercentage ? parseFloat(form.thcPercentage) : null,
@@ -282,6 +285,20 @@ function ProductFormDialog({ product, categories, onClose, onSave }: ProductForm
                 onChange={(e) => setForm({ ...form, price: e.target.value })}
                 placeholder="0.00"
                 required
+              />
+            </div>
+
+            <div>
+              <label className="mb-1 block text-sm font-medium text-zinc-400">
+                Cost Price ($)
+              </label>
+              <Input
+                type="number"
+                step="0.01"
+                min="0"
+                value={form.costPrice}
+                onChange={(e) => setForm({ ...form, costPrice: e.target.value })}
+                placeholder="Wholesale cost"
               />
             </div>
 

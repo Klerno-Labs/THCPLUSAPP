@@ -86,6 +86,7 @@ export async function PATCH(
       "descriptionEn",
       "descriptionEs",
       "price",
+      "costPrice",
       "thcPercentage",
       "cbdPercentage",
       "strainType",

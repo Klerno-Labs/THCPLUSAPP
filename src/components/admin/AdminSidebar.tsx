@@ -19,6 +19,7 @@ import {
   Menu,
   Leaf,
   Zap,
+  Warehouse,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
@@ -34,6 +35,7 @@ interface NavItem {
   href: string;
   icon: React.ElementType;
   adminOnly?: boolean;
+  ownerOnly?: boolean;
 }
 
 export type StaffRole = "OWNER" | "MANAGER" | "STAFF";
@@ -59,6 +61,7 @@ const allNavItems: NavItem[] = [
   { label: "Products", href: "/admin/products", icon: Package, adminOnly: true },
   { label: "Customers", href: "/admin/customers", icon: Users },
   { label: "Redemptions", href: "/admin/redemptions", icon: Gift },
+  { label: "Inventory", href: "/admin/inventory", icon: Warehouse, ownerOnly: true },
   { label: "Analytics", href: "/admin/analytics", icon: BarChart3, adminOnly: true },
   { label: "Staff", href: "/admin/staff", icon: Trophy, adminOnly: true },
   { label: "Promotions", href: "/admin/promotions", icon: Megaphone, adminOnly: true },
@@ -83,7 +86,9 @@ export default function AdminSidebar({
 
   // Filter nav items based on role
   const navItems = allNavItems.filter(
-    (item) => !item.adminOnly || userIsAdmin
+    (item) =>
+      (!item.adminOnly || userIsAdmin) &&
+      (!item.ownerOnly || currentUser.role === "OWNER")
   );
 
   const isActive = (href: string) => {

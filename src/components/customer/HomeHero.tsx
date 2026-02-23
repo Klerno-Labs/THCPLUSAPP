@@ -22,7 +22,6 @@ interface HomeHeroProps {
 
 export default function HomeHero({ banners }: HomeHeroProps) {
   const banner = banners[0];
-  const hasBanner = !!banner;
 
   return (
     <section className="relative overflow-hidden">
@@ -42,7 +41,7 @@ export default function HomeHero({ banners }: HomeHeroProps) {
       />
 
       {/* 3D Rotating Product Image — behind text */}
-      {!hasBanner && <RotatingProductImage />}
+      <RotatingProductImage />
 
       <div className="relative mx-auto max-w-7xl px-4 pb-16 pt-10 sm:px-6 sm:pb-24 sm:pt-16">
         <div className="flex flex-col items-center text-center">

@@ -167,6 +167,7 @@ export async function POST(request: NextRequest) {
         descriptionEn: data.descriptionEn,
         descriptionEs: data.descriptionEs,
         price: data.price,
+        costPrice: data.costPrice,
         thcPercentage: data.thcPercentage,
         cbdPercentage: data.cbdPercentage,
         strainType: data.strainType as any,
